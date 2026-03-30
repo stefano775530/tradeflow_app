@@ -1,6 +1,7 @@
 const models = require("../models");
 const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 require("dotenv").config();
 function signUp(req, res) {
   //Sign up
@@ -80,7 +81,73 @@ function login(req, res) {
       });
     });
 }
+function forgotPassword(req, res) {
+  const email = req.body.email;
+
+  models.User.findOne({ where: { email: email } })
+    .then((user) => {
+      if (!user) {
+        return res.json({
+          message: "If email exists, link sent",
+        });
+      }
+
+      const token = crypto.randomBytes(32).toString("hex");
+
+      user.resetToken = token;
+      user.resetTokenExpire = Date.now() + 3600000; // ساعة
+
+      user.save().then(() => {
+        const link = `http://localhost:3000/reset-password/${token}`;
+
+        console.log("RESET LINK:", link); //  هون أهم إشي
+
+        res.json({
+          message: "Check console for reset link",
+        });
+      });
+    })
+    .catch(() => {
+      res.status(500).json({
+        message: "Something went wrong!",
+      });
+    });
+}
+function resetPassword(req, res) {
+  const token = req.params.token;
+  const password = req.body.password;
+
+  models.User.findOne({ where: { resetToken: token } })
+    .then((user) => {
+      if (!user) {
+        return res.json({ message: "Invalid token" });
+      }
+
+      if (user.resetTokenExpire < Date.now()) {
+        return res.json({ message: "Token expired" });
+      }
+
+      bcryptjs.genSalt(10, function (err, salt) {
+        bcryptjs.hash(password, salt, function (err, hash) {
+          user.password = hash;
+          user.resetToken = null;
+          user.resetTokenExpire = null;
+
+          user.save().then(() => {
+            res.json({ message: "Password updated!" });
+          });
+        });
+      });
+    })
+    .catch(() => {
+      res.status(500).json({
+        message: "Something went wrong!",
+      });
+    });
+}
 module.exports = {
   signUp: signUp,
   login: login,
+  forgotPassword: forgotPassword,
+  resetPassword: resetPassword,
 };
