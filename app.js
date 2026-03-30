@@ -15,4 +15,3 @@ app.use(cors());
 app.use("/user", userRoute);
 
 module.exports = app;
-dsa;
