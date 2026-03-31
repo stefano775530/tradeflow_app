@@ -19,7 +19,7 @@ function signUp(req, res) {
               email: req.body.email,
               password: hash,
               phone_number: req.body.phone_number,
-              warehouses: req.body.warehouses, //بنوخذ الid من اليوزر وبندخله عل ىجدول المستودعات
+              //warehouses: req.body.warehouses, //بنوخذ الid من اليوزر وبندخله عل ىجدول المستودعات
             };
 
             models.User.create(user)
@@ -98,12 +98,12 @@ function forgotPassword(req, res) {
       user.resetTokenExpire = Date.now() + 3600000; // ساعة
 
       user.save().then(() => {
-        const link = `http://localhost:3000/reset-password/${token}`;
-
-        console.log("RESET LINK:", link); //  هون أهم إشي
+        const link = `https://roger-unimplored-luella.ngrok-free.dev/reset-password/${token}`;
 
         res.json({
-          message: "Check console for reset link",
+          message: "Reset link generated",
+          resetLink: link,
+          token: token,
         });
       });
     })
