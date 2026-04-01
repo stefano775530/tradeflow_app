@@ -3,147 +3,110 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 require("dotenv").config();
-function signUp(req, res) {
-  //Sign up
-  models.User.findOne({ where: { email: req.body.email } })
-    .then((result) => {
-      if (result) {
-        res.status(409).json({
-          message: "email already exists",
-        });
-      } else {
-        bcryptjs.genSalt(10, function (err, salt) {
-          bcryptjs.hash(req.body.password, salt, function (err, hash) {
-            const user = {
-              name: req.body.name,
-              email: req.body.email,
-              password: hash,
-              phone_number: req.body.phone_number,
-              //warehouses: req.body.warehouses, //بنوخذ الid من اليوزر وبندخله عل ىجدول المستودعات
-            };
+async function signUp(req, res) {
+  try {
+    const { name, email, password, phone_number } = req.body;
 
-            models.User.create(user)
-              .then((result) => {
-                res.status(201).json({
-                  message: "User created successfully",
-                });
-              })
-              // take the user id created and store it in a variable and use it to create a warehouse for the user in the warehouse table
-              .catch((error) => {
-                res.status(500).json({
-                  message: "Something went wrong!",
-                });
-              });
-          });
-        });
-      }
-    })
-    .catch((error) => {
-      res.status(500).json({
-        message: "Something went wrong!",
-      });
+    const existingUser = await models.User.findOne({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ message: "Email already exists" });
+    }
+
+    const hash = await bcryptjs.hash(password, 10);
+
+    const user = await models.User.create({
+      name,
+      email,
+      password: hash,
+      phone_number,
     });
+
+    res
+      .status(201)
+      .json({ message: "User created successfully", userId: user.id });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
 }
 
-function login(req, res) {
-  models.User.findOne({ where: { email: req.body.email } })
-    .then((user) => {
-      if (!user) {
-        return res.status(401).json({
-          message: "Invalid credentials!",
-        });
-      }
+async function login(req, res) {
+  try {
+    const { email, password } = req.body;
+    const user = await models.User.findOne({ where: { email } });
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials!" });
+    }
 
-      bcryptjs.compare(req.body.password, user.password, (err, result) => {
-        if (result) {
-          const token = jwt.sign(
-            {
-              email: user.email,
-              userId: user.id,
-            },
-            process.env.JWT_KEY,
-          );
+    const match = await bcryptjs.compare(password, user.password);
+    if (!match) {
+      return res.status(401).json({ message: "Invalid credentials!" });
+    }
 
-          return res.status(200).json({
-            message: "Authentication successful!",
-            token,
-          });
-        } else {
-          return res.status(401).json({
-            message: "Invalid credentials!",
-          });
-        }
-      });
-    })
-    .catch(() => {
-      res.status(500).json({
-        message: "Something went wrong!",
-      });
-    });
+    const token = jwt.sign(
+      { email: user.email, userId: user.id },
+      process.env.JWT_KEY,
+      { expiresIn: "1h" },
+    );
+
+    res.status(200).json({ message: "Authentication successful!", token });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
 }
-function forgotPassword(req, res) {
-  const email = req.body.email;
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    const user = await models.User.findOne({ where: { email } });
+    if (!user) {
+      return res.json({ message: "If email exists, link sent" });
+    }
 
-  models.User.findOne({ where: { email: email } })
-    .then((user) => {
-      if (!user) {
-        return res.json({
-          message: "If email exists, link sent",
-        });
-      }
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires_at = new Date(Date.now() + 900000); // 15 minute
 
-      const token = crypto.randomBytes(32).toString("hex");
-
-      user.resetToken = token;
-      user.resetTokenExpire = Date.now() + 3600000; // ساعة
-
-      user.save().then(() => {
-        const link = `https://roger-unimplored-luella.ngrok-free.dev/reset-password/${token}`;
-
-        res.json({
-          message: "Reset link generated",
-          resetLink: link,
-          token: token,
-        });
-      });
-    })
-    .catch(() => {
-      res.status(500).json({
-        message: "Something went wrong!",
-      });
+    await models.PasswordReset.create({
+      user_id: user.id,
+      token,
+      expires_at,
     });
+
+    const link = `http://localhost:3000/api/user/reset-password/${token}`;
+    console.log("RESET LINK:", link);
+
+    res.json({ message: "Check console for reset link" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
 }
-function resetPassword(req, res) {
-  const token = req.params.token;
-  const password = req.body.password;
+async function resetPassword(req, res) {
+  try {
+    const { token } = req.params;
+    const { password } = req.body;
 
-  models.User.findOne({ where: { resetToken: token } })
-    .then((user) => {
-      if (!user) {
-        return res.json({ message: "Invalid token" });
-      }
-
-      if (user.resetTokenExpire < Date.now()) {
-        return res.json({ message: "Token expired" });
-      }
-
-      bcryptjs.genSalt(10, function (err, salt) {
-        bcryptjs.hash(password, salt, function (err, hash) {
-          user.password = hash;
-          user.resetToken = null;
-          user.resetTokenExpire = null;
-
-          user.save().then(() => {
-            res.json({ message: "Password updated!" });
-          });
-        });
-      });
-    })
-    .catch(() => {
-      res.status(500).json({
-        message: "Something went wrong!",
-      });
+    const resetRecord = await models.PasswordReset.findOne({
+      where: { token },
     });
+    if (!resetRecord) return res.json({ message: "Invalid token" });
+
+    if (resetRecord.expires_at < new Date())
+      return res.json({ message: "Token expired" });
+
+    const hash = await bcryptjs.hash(password, 10);
+
+    const user = await models.User.findByPk(resetRecord.user_id);
+    user.password = hash;
+    await user.save();
+
+    await resetRecord.destroy();
+
+    res.json({ message: "Password updated!" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
 }
 module.exports = {
   signUp: signUp,

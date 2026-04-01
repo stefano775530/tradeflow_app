@@ -12,6 +12,6 @@ app.use(bodyParser.json());
 //app.use("/posts", postsRoute);
 app.use(cors());
 
-app.use("/user", userRoute);
+app.use("/api/user", userRoute);
 
 module.exports = app;
