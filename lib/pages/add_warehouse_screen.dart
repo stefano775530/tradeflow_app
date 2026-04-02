@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'link.dart'; // تأكد أن ملف link.dart موجود بجانب هذا الملف في مجلد lib
 
 class AddWarehouseScreen extends StatefulWidget {
   const AddWarehouseScreen({super.key});
@@ -8,19 +11,69 @@ class AddWarehouseScreen extends StatefulWidget {
 }
 
 class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
-  // الألوان المستخدمة لتطابق هوية التطبيق
   final Color activeBlue = const Color(0xFF4A80F0);
-
-  // المتحكمات لاستقبال النصوص من الحقول
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
-  final TextEditingController _capacityController = TextEditingController();
+
+  bool _isLoading = false;
+
+  Future<void> _saveWarehouse() async {
+    final String name = _nameController.text.trim();
+    final String location = _locationController.text.trim();
+
+    if (name.isEmpty) {
+      _showSnackBar("يرجى إدخال اسم المستودع", Colors.orange);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final url = Uri.parse(ApiEndpoints.addWarehouse);
+
+      // التوكن الذي أرسلته لي
+      const String myToken =
+          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNpc2lAc2lzaS5jb20iLCJ1c2VySWQiOjEsImlhdCI6MTc3NTEyOTM5NiwiZXhwIjoxNzc1MTMyOTk2fQ.6xAAPFo7sFR50p1QxP_UFtx9_FVnrhRlMbwC2W-5zNQ";
+
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          // السطر الخاص بـ ngrok
+          'ngrok-skip-browser-warning': 'true',
+          // السطر الخاص بالتوكن لحل مشكلة 401
+          'Authorization': 'Bearer $myToken',
+        },
+        body: jsonEncode({'name': name, 'location': location}),
+      );
+
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        _showSnackBar("تمت إضافة $name بنجاح", Colors.green);
+        if (mounted) Navigator.pop(context, true);
+      } else {
+        _showSnackBar("فشل في الحفظ: ${response.statusCode}", Colors.red);
+        // لطباعة الخطأ بالتفصيل في الـ Debug Console إذا فشل الطلب
+        print("Response Error Body: ${response.body}");
+      }
+    } catch (e) {
+      _showSnackBar("حدث خطأ في الاتصال بالسيرفر", Colors.red);
+      print("Error details: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message), backgroundColor: color));
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _locationController.dispose();
-    _capacityController.dispose();
     super.dispose();
   }
 
@@ -51,50 +104,15 @@ class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
               _buildLabel("اسم المستودع"),
               _buildTextField("مثال: مستودع المنطقة الوسطى", _nameController),
               const SizedBox(height: 20),
-
               _buildLabel("الموقع / العنوان"),
               _buildTextField(
                 "أدخل موقع المستودع بالتفصيل",
                 _locationController,
               ),
-              const SizedBox(height: 20),
-
-              _buildLabel("سعة التخزين"),
-              _buildTextField(
-                "القيمة بالطن أو الوحدات",
-                _capacityController,
-                isNumber: true,
-              ),
               const SizedBox(height: 40),
-
-              // زر الحفظ المعدل لإرسال البيانات للخلف
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_nameController.text.isNotEmpty) {
-                      // التعديل هنا: إرسال البيانات كـ Map عند الرجوع
-                      Navigator.pop(context, {
-                        'name': _nameController.text,
-                        'location': _locationController.text,
-                        'capacity': _capacityController.text,
-                      });
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "تمت إضافة ${_nameController.text} بنجاح",
-                          ),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("يرجى إدخال اسم المستودع"),
-                        ),
-                      );
-                    }
-                  },
+                  onPressed: _isLoading ? null : _saveWarehouse,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: activeBlue,
                     minimumSize: const Size(double.infinity, 55),
@@ -102,14 +120,23 @@ class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "حفظ المستودع",
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "حفظ المستودع",
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
@@ -129,14 +156,9 @@ class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
     );
   }
 
-  Widget _buildTextField(
-    String hint,
-    TextEditingController controller, {
-    bool isNumber = false,
-  }) {
+  Widget _buildTextField(String hint, TextEditingController controller) {
     return TextField(
       controller: controller,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
       textAlign: TextAlign.right,
       decoration: InputDecoration(
         hintText: hint,
