@@ -11,8 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       Storage.belongsTo(models.Warehouse, {
         foreignKey: "warehouse_id",
         onDelete: "CASCADE",
-      }); // Define the association with the Warehouse model
-      // define association here
+      });
     }
   }
   Storage.init(
@@ -20,10 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       warehouse_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: {
-          model: "Warehouses",
-          key: "id",
-        },
+        references: { model: "Warehouses", key: "id" },
       },
       name: {
         type: DataTypes.STRING,

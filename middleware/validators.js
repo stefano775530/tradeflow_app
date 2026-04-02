@@ -97,6 +97,52 @@ const storageValidation = validate([
     .isDate()
     .withMessage("Expiration date must be valid"),
 ]);
+const createPartnerValidation = validate([
+  body("company_name")
+    .trim()
+    .notEmpty()
+    .withMessage("اسم الشركة مطلوب")
+    .isLength({ min: 3 })
+    .withMessage("اسم الشركة يجب أن يكون 3 حروف على الأقل"),
+
+  body("partner_type")
+    .trim()
+    .notEmpty()
+    .withMessage("نوع الشريك مطلوب")
+    .isIn(["supplier", "customer", "distributor"]) // مثال على أنواع محددة، يمكنك تعديلها أو حذف isIn
+    .withMessage("نوع الشريك غير صالح"),
+
+  body("phone_number")
+    .trim()
+    .notEmpty()
+    .withMessage("رقم الهاتف مطلوب")
+    .isMobilePhone()
+    .withMessage("يرجى إدخال رقم هاتف صحيح"),
+]);
+
+const updatePartnerValidation = validate([
+  body("company_name")
+    .optional()
+    .trim()
+    .isLength({ min: 3 })
+    .withMessage("اسم الشركة يجب أن يكون 3 حروف على الأقل"),
+
+  body("partner_type")
+    .optional()
+    .trim()
+    .isIn(["supplier", "customer", "distributor"])
+    .withMessage("نوع الشريك غير صالح"),
+
+  body("phone_number")
+    .optional()
+    .trim()
+    .isMobilePhone()
+    .withMessage("يرجى إدخال رقم هاتف صحيح"),
+]);
+
+const partnerIdValidation = validate([
+  param("id").isInt().withMessage("Partner ID must be an integer"),
+]);
 
 module.exports = {
   signUpValidation,
@@ -108,4 +154,8 @@ module.exports = {
   updateWarehouseValidation,
   warehouseIdValidation,
   storageValidation,
+
+  partnerIdValidation,
+  createPartnerValidation,
+  updatePartnerValidation,
 };

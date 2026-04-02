@@ -9,7 +9,7 @@ const {
 const {
   loginLimiter,
   forgotPasswordLimiter,
-} = require("../middleware/ratelimiter");
+} = require("../middleware/rateLimiter");
 
 const router = express.Router();
 

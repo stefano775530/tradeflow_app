@@ -1,49 +1,52 @@
 "use strict";
 const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
-  class Warehouse extends Model {
+  class Partner extends Model {
     /**
      * Helper method for defining associations.
      * This method is not a part of Sequelize lifecycle.
      * The `models/index` file will call this method automatically.
      */
     static associate(models) {
-      Warehouse.belongsTo(models.User, {
+      Partner.belongsTo(models.User, {
         foreignKey: "user_id",
         onDelete: "CASCADE",
       });
-
-      Warehouse.hasMany(models.Storage, {
-        foreignKey: "warehouse_id",
-        onDelete: "CASCADE",
-      });
+      // define association here
     }
   }
-  Warehouse.init(
+  Partner.init(
     {
       user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
       },
-      name: {
+      company_name: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      location: {
+      partner_type: {
         type: DataTypes.STRING,
+        allowNull: false,
       },
-      created_at: {
+      phone_number: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
       },
     },
     {
       sequelize,
-      modelName: "Warehouse",
-      tableName: "Warehouses",
-      timestamps: false,
+      modelName: "Partner",
+      tableName: "Partners",
     },
   );
-
-  return Warehouse;
+  return Partner;
 };

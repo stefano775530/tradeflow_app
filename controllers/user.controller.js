@@ -72,7 +72,7 @@ async function forgotPassword(req, res) {
       expires_at,
     });
 
-    const link = `http://localhost:3000/api/user/reset-password/${token}`;
+    const link = `https://roger-unimplored-luella.ngrok-free.dev/api/user/reset-password/${token}`;
     console.log("RESET LINK:", link);
 
     res.json({ message: "Check console for reset link" });

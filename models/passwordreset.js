@@ -11,8 +11,7 @@ module.exports = (sequelize, DataTypes) => {
       PasswordReset.belongsTo(models.User, {
         foreignKey: "user_id",
         onDelete: "CASCADE",
-      }); // Define the association with the User model
-      // define association here
+      });
     }
   }
   PasswordReset.init(
@@ -20,7 +19,6 @@ module.exports = (sequelize, DataTypes) => {
       user_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        unique: true,
       },
       token: {
         type: DataTypes.STRING,
@@ -38,7 +36,7 @@ module.exports = (sequelize, DataTypes) => {
     {
       sequelize,
       modelName: "PasswordReset",
-      tableName: "passwordResets",
+      tableName: "PasswordResets",
       timestamps: false,
     },
   );
