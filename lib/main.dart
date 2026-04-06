@@ -27,7 +27,7 @@ class TradeFlowApp extends StatelessWidget {
         useMaterial3: true,
       ),
       // تشغيل التطبيق مباشرة على شاشتنا المصممة
-      home: const HomeScreen(),
+      home: const LoginScreen(),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'link.dart'; // تأكد أن ملف link.dart موجود بجانب هذا الملف في مجلد lib
 
@@ -32,8 +33,11 @@ class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
       final url = Uri.parse(ApiEndpoints.addWarehouse);
 
       // التوكن الذي أرسلته لي
-      const String myToken =
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNpc2lAc2lzaS5jb20iLCJ1c2VySWQiOjEsImlhdCI6MTc3NTEyOTM5NiwiZXhwIjoxNzc1MTMyOTk2fQ.6xAAPFo7sFR50p1QxP_UFtx9_FVnrhRlMbwC2W-5zNQ";
+
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+      // const String myToken =
+      // "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InNpc2lAc2lzaS5jb20iLCJ1c2VySWQiOjEsImlhdCI6MTc3NTEyOTM5NiwiZXhwIjoxNzc1MTMyOTk2fQ.6xAAPFo7sFR50p1QxP_UFtx9_FVnrhRlMbwC2W-5zNQ";
 
       final response = await http.post(
         url,
@@ -43,7 +47,7 @@ class _AddWarehouseScreenState extends State<AddWarehouseScreen> {
           // السطر الخاص بـ ngrok
           'ngrok-skip-browser-warning': 'true',
           // السطر الخاص بالتوكن لحل مشكلة 401
-          'Authorization': 'Bearer $myToken',
+          'Authorization': 'Bearer $token',
         },
         body: jsonEncode({'name': name, 'location': location}),
       );
