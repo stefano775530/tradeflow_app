@@ -1,227 +1,315 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'add_check_screen.dart';
 
-class ChecksScreen extends StatelessWidget {
+class ChecksScreen extends StatefulWidget {
   const ChecksScreen({super.key});
+
+  @override
+  State<ChecksScreen> createState() => _ChecksScreenState();
+}
+
+class _ChecksScreenState extends State<ChecksScreen> {
+  // البيانات التجريبية
+  List<Map<String, dynamic>> checks = [
+    {
+      "company": "شركة المنار للمواد الغذائية",
+      "amount": 1200.0,
+      "date": "2026-03-20",
+      "type": "وارد",
+      "status": "قيد الانتظار",
+    },
+    {
+      "company": "شركة الأمانة للتوريد",
+      "amount": 3100.0,
+      "date": "2026-04-15",
+      "type": "صادر",
+      "status": "قيد الانتظار",
+    },
+    {
+      "company": "شركة الاحسان للاستيراد والتصدير",
+      "amount": 1800.0,
+      "date": "2026-04-20",
+      "type": "صادر",
+      "status": "قيد الانتظار",
+    },
+    {
+      "company": "شركة عمر ورشدي العالول",
+      "amount": 2200.0,
+      "date": "2026-04-30",
+      "type": "صادر",
+      "status": "قيد الانتظار",
+    },
+  ];
+
+  final Color greenColor = const Color(0xFF20E070);
+  final Color redColor = const Color(0xFFFF2020);
+  final Color statusBgColor = const Color(0xFFFFEB9B);
+  final Color statusTextColor = const Color(0xFFC0A000);
+
+  double get totalOutgoing => checks
+      .where((c) => c["type"] == "صادر")
+      .fold(0.0, (sum, c) => sum + (c["amount"] ?? 0.0));
+
+  double get totalIncoming => checks
+      .where((c) => c["type"] == "وارد")
+      .fold(0.0, (sum, c) => sum + (c["amount"] ?? 0.0));
+
+  void _addCheck() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AddCheckScreen()),
+    );
+
+    if (result != null && result is Map<String, dynamic>) {
+      setState(() {
+        checks.add({
+          "company": result["name"] ?? "شركة غير معروفة",
+          "amount": double.tryParse(result["amount"]?.toString() ?? '0') ?? 0.0,
+          "date":
+              result["date"] ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
+          "type": result["type"] ?? "وارد",
+          "status": "قيد الانتظار",
+        });
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Section
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade600,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: () {},
-                    ),
-                  ),
-                  const Text(
-                    'إدارة الشيكات',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontFamily: 'Cairo', // تأكد من إضافة الخط في pubspec.yaml
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Summary Cards
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  _buildSummaryCard("شيكات واردة", "2,000", Colors.green),
-                  const SizedBox(width: 15),
-                  _buildSummaryCard("شيكات صادرة", "3,500", Colors.red),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // Checks List
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                children: [
-                  _buildCheckCard(
-                    "شركة المنار للمواد الغذائية",
-                    "1,200",
-                    "20-03-2026",
-                    "وارد",
-                    true,
-                  ),
-                  _buildCheckCard(
-                    "شركة الأمانة للتوريد",
-                    "3,100",
-                    "15-04-2026",
-                    "صادر",
-                    false,
-                  ),
-                  _buildCheckCard(
-                    "شركة الاحسان للاستيراد والتصدير",
-                    "1,800",
-                    "20-04-2026",
-                    "صادر",
-                    false,
-                  ),
-                  _buildCheckCard(
-                    "شركة عمر ورشدي العالول",
-                    "2,200",
-                    "31-04-2026",
-                    "صادر",
-                    false,
-                  ),
-                ],
-              ),
-            ),
-          ],
+      backgroundColor: const Color(0xFFFBFBFB),
+      appBar: AppBar(
+        title: const Text(
+          "إدارة الشيكات",
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
         ),
+        centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        // --- التعديل هنا لإلغاء سهم العودة ---
+        automaticallyImplyLeading: false,
+        // ----------------------------------
       ),
-    );
-  }
-
-  Widget _buildSummaryCard(String title, String amount, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(15),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.grey.shade300, width: 2),
-        ),
-        child: Column(
-          children: [
-            Text(
-              title,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryCard(
+                    title: "شيكات صادرة",
+                    amount: NumberFormat('#,###').format(totalOutgoing),
+                    color: redColor,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildSummaryCard(
+                    title: "شيكات واردة",
+                    amount: NumberFormat('#,###').format(totalIncoming),
+                    color: greenColor,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 5),
-            Text(
-              amount,
-              style: TextStyle(
-                color: color,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCheckCard(
-    String name,
-    String amount,
-    String date,
-    String type,
-    bool isIncoming,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 15),
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+          ),
+          Expanded(
+            child: checks.isEmpty
+                ? const Center(
+                    child: Text(
+                      "لا يوجد شيكات",
+                      style: TextStyle(fontFamily: 'Cairo'),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: checks.length,
+                    itemBuilder: (context, index) {
+                      final check = checks[index];
+                      final bool isOutgoing = check["type"] == "صادر";
+                      return _buildCheckCard(
+                        check: check,
+                        isOutgoing: isOutgoing,
+                      );
+                    },
+                  ),
           ),
         ],
-        border: Border(
-          right: BorderSide(
-            color: isIncoming ? Colors.green : Colors.red,
-            width: 5,
-          ),
-        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addCheck,
+        backgroundColor: const Color(0xFF3D5EAB),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard({
+    required String title,
+    required String amount,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black12, width: 1),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "\$ $amount",
+          Text(
+            title,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              color: Colors.black54,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            amount,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCheckCard({
+    required Map<String, dynamic> check,
+    required bool isOutgoing,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(color: isOutgoing ? redColor : greenColor, width: 4),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            top: 10,
+            right: 12,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+              decoration: BoxDecoration(
+                color: isOutgoing ? redColor : greenColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                check["type"] ?? "",
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontFamily: 'Cairo',
+                  color: Colors.white,
+                  fontSize: 10,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: isIncoming ? Colors.green : Colors.red,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  type,
-                  style: const TextStyle(color: Colors.white, fontSize: 10),
-                ),
-              ),
-            ],
+            ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            name,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 15),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        check["company"] ?? "غير معروف",
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 50),
+                  ],
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.yellow.shade100,
-                  borderRadius: BorderRadius.circular(8),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Text(
+                      "\$ ${NumberFormat('#,###').format(check["amount"] ?? 0.0)}",
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Text(
-                  "قيد الانتظار",
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
+                const SizedBox(height: 14),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusBgColor,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        check["status"] ?? "معلق",
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: statusTextColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          check["date"] ?? "",
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.black54,
+                            fontSize: 11,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.date_range_outlined,
+                          color: Colors.black54,
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    date,
-                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-                  ),
-                  const SizedBox(width: 5),
-                  Icon(
-                    Icons.calendar_month,
-                    size: 16,
-                    color: Colors.grey.shade700,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
