@@ -1,41 +1,41 @@
 const express = require("express");
-const controller = require("../controllers/warehouse.controller");
+const transactionController = require("../controllers/transaction.controller");
 const { checkAuth } = require("../middleware/check-auth");
 const {
-  createWarehouseValidation,
-  updateWarehouseValidation,
-  warehouseIdValidation,
+  createTransactionValidation,
+  updateTransactionValidation,
 } = require("../middleware/validators");
-const storageRouter = require("./storage");
 
 const router = express.Router();
 
 /**
  * @openapi
- * /api/warehouse:
+ * /api/transactions:
  *   post:
  *     tags:
- *       - Warehouses
- *     summary: Create a new warehouse
+ *       - Transactions
+ *     summary: Create a new transaction
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WarehouseCreateRequest'
+ *             $ref: '#/components/schemas/TransactionCreateRequest'
  *     responses:
  *       201:
- *         description: Warehouse created successfully
+ *         description: Transaction created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/WarehouseCreateResponse'
+ *               $ref: '#/components/schemas/TransactionResponse'
  *       400:
  *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -46,25 +46,26 @@ const router = express.Router();
 router.post(
   "/",
   checkAuth,
-  createWarehouseValidation,
-  controller.createWarehouse,
+  createTransactionValidation,
+  transactionController.createTransaction,
 );
+
 /**
  * @openapi
- * /api/warehouse:
+ * /api/transactions:
  *   get:
  *     tags:
- *       - Warehouses
- *     summary: Get all warehouses for the authenticated user
+ *       - Transactions
+ *     summary: Get all transactions for the authenticated user
  *     responses:
  *       200:
- *         description: List of warehouses
+ *         description: List of transactions
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Warehouse'
+ *                 $ref: '#/components/schemas/Transaction'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -72,36 +73,29 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  */
-router.get("/", checkAuth, controller.getWarehouses);
+router.get("/", checkAuth, transactionController.getTransactions);
+
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/transactions/{id}:
  *   get:
  *     tags:
- *       - Warehouses
- *     summary: Get one warehouse by ID
+ *       - Transactions
+ *     summary: Get one transaction by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Transaction ID
  *     responses:
  *       200:
- *         description: Warehouse found
+ *         description: Transaction found
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Warehouse'
- *       400:
- *         description: Invalid warehouse ID
- *         content:
- *           application/json:
- *             schema:
- *               oneOf:
- *                 - $ref: '#/components/schemas/ValidationErrorResponse'
- *                 - $ref: '#/components/schemas/ErrorResponse'
+ *               $ref: '#/components/schemas/Transaction'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -109,42 +103,48 @@ router.get("/", checkAuth, controller.getWarehouses);
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Transaction not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
+router.get("/:id", checkAuth, transactionController.getTransaction);
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/transactions/{id}:
  *   patch:
  *     tags:
- *       - Warehouses
- *     summary: Update a warehouse by ID
+ *       - Transactions
+ *     summary: Update a transaction by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Transaction ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WarehouseUpdateRequest'
+ *             $ref: '#/components/schemas/TransactionUpdateRequest'
  *     responses:
  *       200:
- *         description: Warehouse updated successfully
+ *         description: Transaction updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/WarehouseUpdateResponse'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Transaction updated successfully
+ *                 transaction:
+ *                   $ref: '#/components/schemas/Transaction'
  *       400:
- *         description: Validation error or invalid warehouse ID
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
@@ -158,7 +158,7 @@ router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Transaction not found
  *         content:
  *           application/json:
  *             schema:
@@ -167,28 +167,26 @@ router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
 router.patch(
   "/:id",
   checkAuth,
-  warehouseIdValidation,
-  updateWarehouseValidation,
-  controller.updateWarehouse,
+  updateTransactionValidation,
+  transactionController.updateTransaction,
 );
-
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/transactions/{id}:
  *   delete:
  *     tags:
- *       - Warehouses
- *     summary: Delete a warehouse by ID
+ *       - Transactions
+ *     summary: Delete a transaction by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Transaction ID
  *     responses:
  *       200:
- *         description: Warehouse deleted successfully
+ *         description: Transaction deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -196,15 +194,7 @@ router.patch(
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Warehouse deleted successfully
- *       400:
- *         description: Invalid warehouse ID
- *         content:
- *           application/json:
- *             schema:
- *               oneOf:
- *                 - $ref: '#/components/schemas/ValidationErrorResponse'
- *                 - $ref: '#/components/schemas/ErrorResponse'
+ *                   example: Transaction deleted successfully
  *       401:
  *         description: Unauthorized
  *         content:
@@ -212,19 +202,12 @@ router.patch(
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Transaction not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete(
-  "/:id",
-  checkAuth,
-  warehouseIdValidation,
-  controller.deleteWarehouse,
-);
-
-router.use("/:warehouseId/storage", storageRouter);
+router.delete("/:id", checkAuth, transactionController.deleteTransaction);
 
 module.exports = router;

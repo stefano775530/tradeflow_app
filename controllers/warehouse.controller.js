@@ -1,8 +1,4 @@
 const models = require("../models");
-const bcryptjs = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-require("dotenv").config();
 
 async function createWarehouse(req, res) {
   try {
@@ -73,8 +69,8 @@ async function updateWarehouse(req, res) {
       return res.status(404).json({ message: "Warehouse not found" });
     }
 
-    warehouse.name = name || warehouse.name;
-    warehouse.location = location || warehouse.location;
+    warehouse.name = name !== undefined ? name : warehouse.name;
+    warehouse.location = location !== undefined ? location : warehouse.location;
 
     await warehouse.save();
 

@@ -1,41 +1,49 @@
 const express = require("express");
-const controller = require("../controllers/warehouse.controller");
+
+const partnerController = require("../controllers/partner.controller");
 const { checkAuth } = require("../middleware/check-auth");
 const {
-  createWarehouseValidation,
-  updateWarehouseValidation,
-  warehouseIdValidation,
+  partnerIdValidation,
+  createPartnerValidation,
+  updatePartnerValidation,
 } = require("../middleware/validators");
-const storageRouter = require("./storage");
 
 const router = express.Router();
 
 /**
  * @openapi
- * /api/warehouse:
+ * /api/partners/add:
  *   post:
  *     tags:
- *       - Warehouses
- *     summary: Create a new warehouse
+ *       - Partners
+ *     summary: Create a new partner
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WarehouseCreateRequest'
+ *             $ref: '#/components/schemas/PartnerCreateRequest'
  *     responses:
  *       201:
- *         description: Warehouse created successfully
+ *         description: Partner created successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/WarehouseCreateResponse'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Partner created successfully
+ *                 partner:
+ *                   $ref: '#/components/schemas/Partner'
  *       400:
  *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/ValidationErrorResponse'
+ *               oneOf:
+ *                 - $ref: '#/components/schemas/ValidationErrorResponse'
+ *                 - $ref: '#/components/schemas/ErrorResponse'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -44,27 +52,27 @@ const router = express.Router();
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  */
 router.post(
-  "/",
+  "/add",
   checkAuth,
-  createWarehouseValidation,
-  controller.createWarehouse,
+  createPartnerValidation,
+  partnerController.createPartner,
 );
 /**
  * @openapi
- * /api/warehouse:
+ * /api/partners/all:
  *   get:
  *     tags:
- *       - Warehouses
- *     summary: Get all warehouses for the authenticated user
+ *       - Partners
+ *     summary: Get all partners for the authenticated user
  *     responses:
  *       200:
- *         description: List of warehouses
+ *         description: List of partners
  *         content:
  *           application/json:
  *             schema:
  *               type: array
  *               items:
- *                 $ref: '#/components/schemas/Warehouse'
+ *                 $ref: '#/components/schemas/Partner'
  *       401:
  *         description: Unauthorized
  *         content:
@@ -72,30 +80,30 @@ router.post(
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  */
-router.get("/", checkAuth, controller.getWarehouses);
+router.get("/all", checkAuth, partnerController.getPartners);
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/partners/{id}:
  *   get:
  *     tags:
- *       - Warehouses
- *     summary: Get one warehouse by ID
+ *       - Partners
+ *     summary: Get one partner by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Partner ID
  *     responses:
  *       200:
- *         description: Warehouse found
+ *         description: Partner found
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Warehouse'
+ *               $ref: '#/components/schemas/Partner'
  *       400:
- *         description: Invalid warehouse ID
+ *         description: Invalid partner ID
  *         content:
  *           application/json:
  *             schema:
@@ -109,42 +117,53 @@ router.get("/", checkAuth, controller.getWarehouses);
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Partner not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
+router.get(
+  "/:id",
+  checkAuth,
+  partnerIdValidation,
+  partnerController.getPartner,
+);
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/partners/{id}:
  *   patch:
  *     tags:
- *       - Warehouses
- *     summary: Update a warehouse by ID
+ *       - Partners
+ *     summary: Update a partner by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Partner ID
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/WarehouseUpdateRequest'
+ *            $ref: '#/components/schemas/PartnerUpdateRequest'
  *     responses:
  *       200:
- *         description: Warehouse updated successfully
+ *         description: Partner updated successfully
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/WarehouseUpdateResponse'
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Partner updated successfully
+ *                 partner:
+ *                   $ref: '#/components/schemas/Partner'
  *       400:
- *         description: Validation error or invalid warehouse ID
+ *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
@@ -158,7 +177,7 @@ router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Partner not found
  *         content:
  *           application/json:
  *             schema:
@@ -167,28 +186,26 @@ router.get("/:id", checkAuth, warehouseIdValidation, controller.getWarehouse);
 router.patch(
   "/:id",
   checkAuth,
-  warehouseIdValidation,
-  updateWarehouseValidation,
-  controller.updateWarehouse,
+  updatePartnerValidation,
+  partnerController.updatePartner,
 );
-
 /**
  * @openapi
- * /api/warehouse/{id}:
+ * /api/partners/{id}:
  *   delete:
  *     tags:
- *       - Warehouses
- *     summary: Delete a warehouse by ID
+ *       - Partners
+ *     summary: Delete a partner by ID
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
  *         schema:
  *           type: integer
- *         description: Warehouse ID
+ *         description: Partner ID
  *     responses:
  *       200:
- *         description: Warehouse deleted successfully
+ *         description: Partner deleted successfully
  *         content:
  *           application/json:
  *             schema:
@@ -196,15 +213,7 @@ router.patch(
  *               properties:
  *                 message:
  *                   type: string
- *                   example: Warehouse deleted successfully
- *       400:
- *         description: Invalid warehouse ID
- *         content:
- *           application/json:
- *             schema:
- *               oneOf:
- *                 - $ref: '#/components/schemas/ValidationErrorResponse'
- *                 - $ref: '#/components/schemas/ErrorResponse'
+ *                   example: Partner deleted successfully
  *       401:
  *         description: Unauthorized
  *         content:
@@ -212,19 +221,12 @@ router.patch(
  *             schema:
  *               $ref: '#/components/schemas/UnauthorizedResponse'
  *       404:
- *         description: Warehouse not found
+ *         description: Partner not found
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.delete(
-  "/:id",
-  checkAuth,
-  warehouseIdValidation,
-  controller.deleteWarehouse,
-);
-
-router.use("/:warehouseId/storage", storageRouter);
+router.delete("/:id", checkAuth, partnerController.deletePartner);
 
 module.exports = router;

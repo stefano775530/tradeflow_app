@@ -13,6 +13,8 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Partner, { foreignKey: "user_id" });
 
       User.hasMany(models.PasswordReset, { foreignKey: "user_id" });
+
+      User.hasMany(models.Transaction, { foreignKey: "user_id" });
     }
   }
   User.init(

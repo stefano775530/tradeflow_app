@@ -1,11 +1,9 @@
-const models = require("../models"); // تأكد من استدعاء المودلز بنفس الطريقة
+const models = require("../models");
 
-// 1. إضافة شريك جديد (مرتبط بالـ User)
 async function createPartner(req, res) {
   try {
     const { company_name, partner_type, phone_number } = req.body;
 
-    // التحقق من المدخلات
     if (!company_name || !partner_type || !phone_number) {
       return res.status(400).json({ message: "جميع الحقول مطلوبة" });
     }
@@ -14,7 +12,7 @@ async function createPartner(req, res) {
       company_name,
       partner_type,
       phone_number,
-      user_id: req.userData.userId, // ربط الشريك بالمستخدم الحالي
+      user_id: req.userData.userId,
     });
 
     res.status(201).json({
@@ -29,7 +27,6 @@ async function createPartner(req, res) {
   }
 }
 
-// 2. جلب جميع شركاء المستخدم الحالي
 async function getPartners(req, res) {
   try {
     const partners = await models.Partner.findAll({
@@ -43,7 +40,6 @@ async function getPartners(req, res) {
   }
 }
 
-// 3. جلب شريك واحد محدد (بشرط أن يخص المستخدم)
 async function getPartner(req, res) {
   try {
     const { id } = req.params;
@@ -65,7 +61,6 @@ async function getPartner(req, res) {
   }
 }
 
-// 4. تحديث بيانات الشريك
 async function updatePartner(req, res) {
   try {
     const { id } = req.params;
@@ -94,7 +89,6 @@ async function updatePartner(req, res) {
   }
 }
 
-// 5. حذف شريك
 async function deletePartner(req, res) {
   try {
     const { id } = req.params;

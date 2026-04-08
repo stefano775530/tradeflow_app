@@ -2,12 +2,13 @@ const rateLimit = require("express-rate-limit");
 
 const loginLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 5,
+  max: 100,
   message: {
     message: "Too many login attempts. Please try again after 10 minutes.",
   },
   standardHeaders: true,
   legacyHeaders: false,
+  skip: (req, res) => process.env.NODE_ENV === "test",
 });
 
 const forgotPasswordLimiter = rateLimit({
