@@ -12,4 +12,7 @@ class ApiEndpoints {
   static const String addPartner = "$baseUrl/partners/add";
 
   static const String getWarehouses = "$baseUrl/warehouse";
+  static const String addCheck = "$baseUrl/checks";
+
+  static const String getChecks = "$baseUrl/checks";
 }

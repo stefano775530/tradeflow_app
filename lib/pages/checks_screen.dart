@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'link.dart';
 import 'add_check_screen.dart';
 
 class ChecksScreen extends StatefulWidget {
@@ -10,179 +14,359 @@ class ChecksScreen extends StatefulWidget {
 }
 
 class _ChecksScreenState extends State<ChecksScreen> {
-  // البيانات التجريبية
-  List<Map<String, dynamic>> checks = [
-    {
-      "company": "شركة المنار للمواد الغذائية",
-      "amount": 1200.0,
-      "date": "2026-03-20",
-      "type": "وارد",
-      "status": "قيد الانتظار",
-    },
-    {
-      "company": "شركة الأمانة للتوريد",
-      "amount": 3100.0,
-      "date": "2026-04-15",
-      "type": "صادر",
-      "status": "قيد الانتظار",
-    },
-    {
-      "company": "شركة الاحسان للاستيراد والتصدير",
-      "amount": 1800.0,
-      "date": "2026-04-20",
-      "type": "صادر",
-      "status": "قيد الانتظار",
-    },
-    {
-      "company": "شركة عمر ورشدي العالول",
-      "amount": 2200.0,
-      "date": "2026-04-30",
-      "type": "صادر",
-      "status": "قيد الانتظار",
-    },
-  ];
+  List checks = [];
+  bool _isLoading = true;
 
   final Color greenColor = const Color(0xFF20E070);
   final Color redColor = const Color(0xFFFF2020);
   final Color statusBgColor = const Color(0xFFFFEB9B);
   final Color statusTextColor = const Color(0xFFC0A000);
+  final Color activeBlue = const Color(0xFF446BC0);
 
-  double get totalOutgoing => checks
-      .where((c) => c["type"] == "صادر")
-      .fold(0.0, (sum, c) => sum + (c["amount"] ?? 0.0));
+  @override
+  void initState() {
+    super.initState();
+    fetchChecks();
+  }
 
-  double get totalIncoming => checks
-      .where((c) => c["type"] == "وارد")
-      .fold(0.0, (sum, c) => sum + (c["amount"] ?? 0.0));
+  Future<void> fetchChecks() async {
+    if (!mounted) return;
+    setState(() => _isLoading = true);
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
 
-  void _addCheck() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AddCheckScreen()),
-    );
+      var response = await http.get(
+        Uri.parse(ApiEndpoints.getChecks),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      );
 
-    if (result != null && result is Map<String, dynamic>) {
-      setState(() {
-        checks.add({
-          "company": result["name"] ?? "شركة غير معروفة",
-          "amount": double.tryParse(result["amount"]?.toString() ?? '0') ?? 0.0,
-          "date":
-              result["date"] ?? DateFormat('yyyy-MM-dd').format(DateTime.now()),
-          "type": result["type"] ?? "وارد",
-          "status": "قيد الانتظار",
+      if (response.statusCode == 200) {
+        var responseData = jsonDecode(response.body);
+        setState(() {
+          if (responseData is Map) {
+            checks = responseData['checks'] ?? responseData['data'] ?? [];
+          } else if (responseData is List) {
+            checks = responseData;
+          }
         });
-      });
+      }
+    } catch (e) {
+      debugPrint("Error fetching checks: $e");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _updateCheckStatus(
+    Map<String, dynamic> check,
+    String newStatus,
+  ) async {
+    setState(() {
+      check["status"] = newStatus;
+    });
+
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      var response = await http.put(
+        Uri.parse(ApiEndpoints.addCheck),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({"id": check["id"], "status": newStatus}),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        await fetchChecks();
+      }
+    } catch (e) {
+      await fetchChecks();
+    }
+  }
+
+  Future<void> _deleteCheck(dynamic id) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      var response = await http.delete(
+        Uri.parse("${ApiEndpoints.baseUrl}/checks/$id"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        fetchChecks();
+      }
+    } catch (e) {
+      debugPrint("Error deleting check: $e");
+    }
+  }
+
+  void _confirmDelete(dynamic id) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          "تأكيد الحذف",
+          textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        content: const Text(
+          "هل أنت متأكد من حذف هذا الشيك نهائياً؟",
+          textAlign: TextAlign.right,
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("إلغاء", style: TextStyle(fontFamily: 'Cairo')),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteCheck(id);
+            },
+            child: const Text(
+              "حذف",
+              style: TextStyle(color: Colors.red, fontFamily: 'Cairo'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- دالة عرض تفاصيل الشيك الكاملة ---
+  void _showCheckDetailsDialog(Map<String, dynamic> check) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "تفاصيل الشيك",
+          textAlign: TextAlign.center,
+          style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _detailRow("اسم العميل:", check["company_name"]),
+              _detailRow("رقم الشيك:", check["check_number"]),
+              _detailRow("البنك:", check["bank_name"]),
+              _detailRow("المبلغ:", "\$ ${check["amount"]}"),
+              _detailRow("التاريخ:", check["issue_date"]),
+              _detailRow("النوع:", check["type"]),
+              _detailRow(
+                "الحالة:",
+                check["status"] == "pending" ? "قيد الانتظار" : "محصل",
+              ),
+              const Divider(height: 30),
+              const Text(
+                "الملاحظات:",
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blueGrey,
+                ),
+              ),
+              const SizedBox(height: 5),
+              Text(
+                (check["notes"] == null || check["notes"].toString().isEmpty)
+                    ? "لا توجد ملاحظات"
+                    : check["notes"],
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              "إغلاق",
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              value?.toString() ?? "---",
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Text(
+            label,
+            style: const TextStyle(
+              fontFamily: 'Cairo',
+              fontWeight: FontWeight.bold,
+              color: Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCheckOptions(int index) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        final check = checks[index];
+        bool isCollected = check["status"] == "collected";
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // الخيار الجديد: عرض البيانات الكاملة
+              ListTile(
+                leading: Icon(Icons.visibility, color: activeBlue),
+                title: const Text(
+                  "عرض البيانات الكاملة",
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showCheckDetailsDialog(check);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.edit, color: Colors.blue),
+                title: const Text(
+                  "تعديل بيانات الشيك",
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () async {
+                  Navigator.pop(context);
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => AddCheckScreen(checkToEdit: check),
+                    ),
+                  );
+                  if (result == true) fetchChecks();
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  isCollected ? Icons.history : Icons.check_circle,
+                  color: isCollected ? Colors.orange : Colors.green,
+                ),
+                title: Text(
+                  isCollected ? "إعادة إلى قيد الانتظار" : "تحويل إلى محصل",
+                  style: const TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _updateCheckStatus(
+                    check,
+                    isCollected ? "pending" : "collected",
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  "حذف الشيك",
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDelete(check["id"]);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFBFBFB),
+      backgroundColor: Colors.white,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text(
           "إدارة الشيكات",
           style: TextStyle(
             fontFamily: 'Cairo',
             fontWeight: FontWeight.bold,
-            fontSize: 22,
+            fontSize: 24,
           ),
         ),
         centerTitle: true,
         backgroundColor: Colors.white,
         elevation: 0,
-        // --- التعديل هنا لإلغاء سهم العودة ---
-        automaticallyImplyLeading: false,
-        // ----------------------------------
+        foregroundColor: Colors.black,
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: "شيكات صادرة",
-                    amount: NumberFormat('#,###').format(totalOutgoing),
-                    color: redColor,
-                  ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: fetchChecks,
+              child: ListView.builder(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildSummaryCard(
-                    title: "شيكات واردة",
-                    amount: NumberFormat('#,###').format(totalIncoming),
-                    color: greenColor,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            child: checks.isEmpty
-                ? const Center(
-                    child: Text(
-                      "لا يوجد شيكات",
-                      style: TextStyle(fontFamily: 'Cairo'),
+                itemCount: checks.length,
+                itemBuilder: (context, index) {
+                  return GestureDetector(
+                    onTap: () => _showCheckOptions(index),
+                    child: _buildCheckCard(
+                      check: checks[index],
+                      isOutgoing: checks[index]["type"] == "صادر",
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: checks.length,
-                    itemBuilder: (context, index) {
-                      final check = checks[index];
-                      final bool isOutgoing = check["type"] == "صادر";
-                      return _buildCheckCard(
-                        check: check,
-                        isOutgoing: isOutgoing,
-                      );
-                    },
-                  ),
-          ),
-        ],
-      ),
+                  );
+                },
+              ),
+            ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addCheck,
-        backgroundColor: const Color(0xFF3D5EAB),
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildSummaryCard({
-    required String title,
-    required String amount,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.black12, width: 1),
-      ),
-      child: Column(
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              color: Colors.black54,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            amount,
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 24,
-            ),
-          ),
-        ],
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddCheckScreen()),
+          );
+          if (result == true) fetchChecks();
+        },
+        backgroundColor: activeBlue,
+        child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
     );
   }
@@ -192,126 +376,113 @@ class _ChecksScreenState extends State<ChecksScreen> {
     required bool isOutgoing,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: isOutgoing ? redColor : greenColor, width: 4),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: isOutgoing
+              ? redColor.withOpacity(0.5)
+              : greenColor.withOpacity(0.5),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.grey.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 10,
-            right: 12,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-              decoration: BoxDecoration(
-                color: isOutgoing ? redColor : greenColor,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                check["type"] ?? "",
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+      child: Padding(
+        padding: const EdgeInsets.all(15),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        check["company"] ?? "غير معروف",
-                        textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 50),
-                  ],
+                Text(
+                  "\$ ${NumberFormat('#,###').format(double.tryParse(check["amount"].toString()) ?? 0)}",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                  ),
                 ),
-                const SizedBox(height: 12),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     Text(
-                      "\$ ${NumberFormat('#,###').format(check["amount"] ?? 0.0)}",
+                      check["company_name"] ?? "غير معروف",
                       style: const TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
-                        fontSize: 17,
+                        fontSize: 16,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusBgColor,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        check["status"] ?? "معلق",
-                        style: TextStyle(
-                          fontFamily: 'Cairo',
-                          color: statusTextColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Row(
-                      children: [
-                        Text(
-                          check["date"] ?? "",
-                          style: const TextStyle(
-                            fontFamily: 'Cairo',
-                            color: Colors.black54,
-                            fontSize: 11,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.date_range_outlined,
-                          color: Colors.black54,
-                          size: 16,
-                        ),
-                      ],
+                    const SizedBox(width: 8),
+                    _buildBadge(
+                      check["type"] ?? "وارد",
+                      isOutgoing ? redColor : greenColor,
                     ),
                   ],
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(height: 15),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatusBadge(check["status"]),
+                Text(
+                  "تاريخ الاستحقاق: ${check["issue_date"]}",
+                  style: const TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    fontFamily: 'Cairo',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String? status) {
+    bool isPending = status == "pending";
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isPending ? statusBgColor : Colors.green.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        isPending ? "قيد الانتظار" : "محصل",
+        style: TextStyle(
+          fontFamily: 'Cairo',
+          color: isPending ? statusTextColor : Colors.green.shade700,
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'Cairo',
+        ),
       ),
     );
   }

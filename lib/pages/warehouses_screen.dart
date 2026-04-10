@@ -8,8 +8,8 @@ import 'inventory_list_screen.dart';
 
 class Warehouse {
   final int? id;
-  final String name;
-  final String location;
+  String name; // تم إزالة final لتصبح قابلة للتعديل
+  String location; // تم إزالة final لتصبح قابلة للتعديل
   final int itemsCount;
   final int categoriesCount;
 
@@ -50,6 +50,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
     _fetchWarehouses();
   }
 
+  // دالة الحذف
   Future<void> _deleteWarehouse(int? id, String name) async {
     if (id == null) return;
 
@@ -141,6 +142,7 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
     }
   }
 
+  // جلب البيانات
   Future<void> _fetchWarehouses() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -256,14 +258,16 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
               MaterialPageRoute(
                 builder: (context) => InventoryListScreen(warehouse: warehouse),
               ),
-            );
+            ).then((_) {
+              // هذا السطر يضمن تحديث الواجهة إذا تم تعديل اسم المستودع بالداخل
+              setState(() {});
+            });
           },
           onLongPress: () => _deleteWarehouse(warehouse.id, warehouse.name),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                // أيقونة الحذف اختيارية هنا، قمت بإبقائها صغيرة ومرتبة
                 IconButton(
                   icon: const Icon(
                     Icons.delete_outline,
@@ -353,7 +357,6 @@ class _WarehousesScreenState extends State<WarehousesScreen> {
         ),
         const SizedBox(height: 8),
         FloatingActionButton(
-          // هذا السطر هو الحل لمشكلة الـ Hero Tag
           heroTag: "main_warehouse_fab_unique",
           onPressed: _navigateToAddScreen,
           backgroundColor: activeBlue,

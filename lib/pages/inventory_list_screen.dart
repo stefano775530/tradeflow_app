@@ -5,11 +5,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'link.dart';
 import 'warehouses_screen.dart';
 
-// موديل المنتج المعدل ليتوافق مع تسميات السيرفر (quantity بدلاً من plates_count)
+// موديل المنتج المعدل ليتوافق مع تسميات السيرفر
 class Product {
   final String id;
   String name;
-  int quantity; // تم التغيير هنا لتطابق السيرفر
+  int quantity;
   double purchasePrice;
   double salePrice;
   double thickness;
@@ -33,8 +33,6 @@ class Product {
     return Product(
       id: json['id'].toString(),
       name: json['name'] ?? '',
-      // السيرفر يرجعها باسم quantity أو plates_count؟
-      // بناءً على خطأ الإضافة، السيرفر يتوقع quantity، لذا سنقرأها منه
       quantity: json['quantity'] ?? json['plates_count'] ?? 0,
       purchasePrice: double.tryParse(json['purchase_price'].toString()) ?? 0.0,
       salePrice: double.tryParse(json['sale_price'].toString()) ?? 0.0,
@@ -81,6 +79,89 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     _fetchProducts();
   }
 
+  // --- تعديل بيانات المستودع (الاسم والموقع) ---
+  Future<void> _editWarehouseDetails() async {
+    final TextEditingController editNameController = TextEditingController(
+      text: widget.warehouse.name,
+    );
+    final TextEditingController editLocationController = TextEditingController(
+      text: widget.warehouse.location,
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    showDialog(
+      context: context,
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Text(
+            "تعديل بيانات المستودع",
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: editNameController,
+                decoration: const InputDecoration(labelText: "اسم المستودع"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: editLocationController,
+                decoration: const InputDecoration(
+                  labelText: "الموقع / العنوان",
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("إلغاء"),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: activeBlue),
+              onPressed: () async {
+                try {
+                  final response = await http.put(
+                    Uri.parse(
+                      "${ApiEndpoints.getWarehouses}/${widget.warehouse.id}",
+                    ),
+                    headers: {
+                      "Authorization": "Bearer $token",
+                      "Content-Type": "application/json",
+                      "Accept": "application/json",
+                    },
+                    body: jsonEncode({
+                      "name": editNameController.text,
+                      "location": editLocationController.text,
+                    }),
+                  );
+                  if (response.statusCode == 200) {
+                    setState(() {
+                      widget.warehouse.name = editNameController.text;
+                      widget.warehouse.location = editLocationController.text;
+                    });
+                    if (!mounted) return;
+                    Navigator.pop(context);
+                  }
+                } catch (e) {
+                  debugPrint("Error updating warehouse: $e");
+                }
+              },
+              child: const Text("حفظ", style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _fetchProducts() async {
     setState(() => _isLoading = true);
     final prefs = await SharedPreferences.getInstance();
@@ -120,15 +201,9 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           builder: (context) => Directionality(
             textDirection: TextDirection.rtl,
             child: AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
               title: const Text(
                 "حذف المستودع",
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontFamily: 'Cairo'),
               ),
               content: Text(
                 "هل أنت متأكد من حذف '${widget.warehouse.name}' نهائياً؟",
@@ -136,10 +211,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text(
-                    "إلغاء",
-                    style: TextStyle(color: Colors.grey, fontFamily: 'Cairo'),
-                  ),
+                  child: const Text("إلغاء"),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -148,7 +220,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   onPressed: () => Navigator.pop(context, true),
                   child: const Text(
                     "حذف الآن",
-                    style: TextStyle(color: Colors.white, fontFamily: 'Cairo'),
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
               ],
@@ -161,10 +233,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       try {
         final response = await http.delete(
           Uri.parse("${ApiEndpoints.getWarehouses}/${widget.warehouse.id}"),
-          headers: {
-            "Authorization": "Bearer $token",
-            "Accept": "application/json",
-          },
+          headers: {"Authorization": "Bearer $token"},
         );
         if (response.statusCode == 200 || response.statusCode == 204) {
           Navigator.pop(context, true);
@@ -175,17 +244,15 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     }
   }
 
+  // --- دالة التأكيد (إضافة أو تعديل) ---
   Future<void> _confirmAction() async {
     if (_nameController.text.isEmpty) return;
-
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
-    // التعديل الجوهري هنا: إرسال quantity بدلاً من plates_count
     final Map<String, dynamic> data = {
       "name": _nameController.text,
-      "quantity":
-          int.tryParse(_platesController.text) ?? 0, // تم التغيير لـ quantity
+      "quantity": int.tryParse(_platesController.text) ?? 0,
       "purchase_price": double.tryParse(_purchasePriceController.text) ?? 0.0,
       "sale_price": double.tryParse(_salePriceController.text) ?? 0.0,
       "thickness": double.tryParse(_thicknessController.text) ?? 0.0,
@@ -195,62 +262,50 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     };
 
     try {
-      String baseUrl =
+      String url =
           "https://roger-unimplored-luella.ngrok-free.dev/api/warehouse/${widget.warehouse.id}/storage";
-      http.Response response;
-
       if (_isEditMode && _selectedProductId != null) {
-        response = await http.put(
-          Uri.parse("$baseUrl/$_selectedProductId"),
-          headers: {
-            "Authorization": "Bearer $token",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: jsonEncode(data),
-        );
-      } else {
-        response = await http.post(
-          Uri.parse(baseUrl),
-          headers: {
-            "Authorization": "Bearer $token",
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-          },
-          body: jsonEncode(data),
-        );
+        url = "$url/$_selectedProductId";
       }
+
+      final response = await (_isEditMode
+          ? http.put(
+              Uri.parse(url),
+              headers: {
+                "Authorization": "Bearer $token",
+                "Content-Type": "application/json",
+              },
+              body: jsonEncode(data),
+            )
+          : http.post(
+              Uri.parse(url),
+              headers: {
+                "Authorization": "Bearer $token",
+                "Content-Type": "application/json",
+              },
+              body: jsonEncode(data),
+            ));
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _resetForm();
         _fetchProducts();
-      } else {
-        // سيطبع لك السيرفر الآن إذا كان هناك حقول أخرى ناقصة
-        debugPrint("Server Error: ${response.body}");
       }
     } catch (e) {
-      debugPrint("Connection Error: $e");
+      debugPrint("Error: $e");
     }
   }
 
   Future<void> _deleteProduct(String productId) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
-
     try {
       final response = await http.delete(
         Uri.parse(
           "https://roger-unimplored-luella.ngrok-free.dev/api/warehouse/${widget.warehouse.id}/storage/$productId",
         ),
-        headers: {
-          "Authorization": "Bearer $token",
-          "Accept": "application/json",
-        },
+        headers: {"Authorization": "Bearer $token"},
       );
-
-      if (response.statusCode == 200) {
-        _fetchProducts();
-      }
+      if (response.statusCode == 200) _fetchProducts();
     } catch (e) {
       debugPrint("Delete Error: $e");
     }
@@ -297,7 +352,6 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
             icon: const Icon(
               Icons.delete_forever_rounded,
               color: Colors.redAccent,
-              size: 26,
             ),
             onPressed: _deleteWarehouse,
           ),
@@ -364,13 +418,6 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       decoration: BoxDecoration(
         color: activeBlue,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: activeBlue.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -391,31 +438,33 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   child: Icon(
                     _isAddSectionVisible ? Icons.close : Icons.add,
                     color: activeBlue,
-                    size: 28,
                   ),
                 ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    widget.warehouse.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      fontFamily: 'Cairo',
+              InkWell(
+                onTap: _editWarehouseDetails,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      widget.warehouse.name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
-                  ),
-                  Text(
-                    widget.warehouse.location,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 13,
-                      fontFamily: 'Cairo',
+                    Text(
+                      widget.warehouse.location,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 13,
+                        fontFamily: 'Cairo',
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const Icon(
                 Icons.inventory_2_rounded,
@@ -426,7 +475,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           ),
           const SizedBox(height: 25),
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(15),
@@ -479,10 +528,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: activeBlue.withOpacity(0.1), width: 2),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15),
-        ],
+        border: Border.all(color: activeBlue.withOpacity(0.1)),
       ),
       child: Column(
         children: [
@@ -566,16 +612,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: activeBlue,
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
                   ),
                   child: const Text(
                     "حفظ البيانات",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontFamily: 'Cairo',
-                    ),
+                    style: TextStyle(fontFamily: 'Cairo'),
                   ),
                 ),
               ),
@@ -586,7 +626,6 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
                   "إلغاء",
                   style: TextStyle(
                     color: Colors.redAccent,
-                    fontWeight: FontWeight.bold,
                     fontFamily: 'Cairo',
                   ),
                 ),
@@ -609,24 +648,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
       textAlign: TextAlign.right,
-      style: const TextStyle(
-        color: Colors.black,
-        fontSize: 14,
-        fontWeight: FontWeight.bold,
-      ),
       decoration: InputDecoration(
         labelText: hint,
-        labelStyle: TextStyle(
-          color: Colors.grey[600],
-          fontSize: 12,
-          fontFamily: 'Cairo',
-        ),
         filled: true,
         fillColor: bgLight,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 12,
-        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide.none,
@@ -641,13 +666,6 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       decoration: BoxDecoration(
         color: cardWhite,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: ListTile(
         onTap: () => _showOptions(p),
@@ -658,46 +676,25 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 "${p.quantity}",
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 17,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
-              const Text(
-                "لوح",
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              const Text("لوح", style: TextStyle(fontSize: 9)),
             ],
           ),
         ),
         title: Text(
           p.name,
           style: const TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
             fontFamily: 'Cairo',
+            fontWeight: FontWeight.w800,
           ),
         ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            "شراء: ${p.purchasePrice} | بيع: ${p.salePrice}\nالمقاس: ${p.thickness}x${p.height}x${p.width}",
-            style: TextStyle(
-              color: Colors.grey[700],
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+        subtitle: Text(
+          "شراء: ${p.purchasePrice} | بيع: ${p.salePrice}\nالمقاس: ${p.thickness}x${p.height}x${p.width}",
+          style: const TextStyle(fontSize: 11),
         ),
         trailing: Icon(Icons.more_vert, color: Colors.grey[400]),
       ),
@@ -714,28 +711,10 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       builder: (context) => Directionality(
         textDirection: TextDirection.rtl,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 25),
+          padding: const EdgeInsets.all(25),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
-                width: 40,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "خيارات المنتج",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  fontFamily: 'Cairo',
-                ),
-              ),
-              const SizedBox(height: 20),
               _buildOptionTile(
                 Icons.edit_note_rounded,
                 "تعديل البيانات",
@@ -780,15 +759,8 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
   ) {
     return ListTile(
       onTap: onTap,
-      leading: Icon(icon, color: color, size: 28),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: 15,
-          fontFamily: 'Cairo',
-        ),
-      ),
+      leading: Icon(icon, color: color),
+      title: Text(title, style: const TextStyle(fontFamily: 'Cairo')),
     );
   }
 }
