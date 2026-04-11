@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tradeflow_app/pages/link.dart';
 
 class PartnersScreen extends StatefulWidget {
   const PartnersScreen({super.key});
@@ -11,11 +13,13 @@ class PartnersScreen extends StatefulWidget {
 class _PartnersScreenState extends State<PartnersScreen> {
   bool isAdding = false;
   bool isLoading = false;
+  bool isEditing = false;
+  int? currentPartnerId;
   late Future<List<dynamic>> _partnersFuture;
 
   final TextEditingController companyNameController = TextEditingController();
   final TextEditingController phoneController = TextEditingController();
-  final TextEditingController typeController = TextEditingController();
+  String selectedType = "customer";
 
   final Color activeBlue = const Color(0xFF4A80F0);
   final Color textGrey = const Color(0xFF8E8E93);
@@ -26,107 +30,214 @@ class _PartnersScreenState extends State<PartnersScreen> {
     _refreshPartners();
   }
 
-  // دالة لتحديث الحالة وجلب البيانات من جديد
   void _refreshPartners() {
     setState(() {
       _partnersFuture = _fetchPartnersFromApi();
     });
   }
 
-  // جلب البيانات مع تجاوز حماية ngrok ومعالجة هيكلية الـ JSON
   Future<List<dynamic>> _fetchPartnersFromApi() async {
     try {
-      const String url =
-          "https://roger-unimplored-luella.ngrok-free.dev/api/partners";
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+      final String url = ApiEndpoints.getPartners;
 
       var response = await Dio().get(
         url,
         options: Options(
           headers: {
             "Accept": "application/json",
-            "ngrok-skip-browser-warning": "true", // تجاوز صفحة التحذير
+            "ngrok-skip-browser-warning": "true",
+            "Authorization": "Bearer $token",
           },
+          validateStatus: (status) => status! < 500,
         ),
       );
 
       if (response.statusCode == 200) {
         var rawData = response.data;
-        // التأكد من استخراج القائمة سواء كانت مباشرة أو داخل مفتاح data
-        if (rawData is List) {
-          return rawData;
-        } else if (rawData is Map && rawData.containsKey('data')) {
+        if (rawData is List) return rawData;
+        if (rawData is Map && rawData.containsKey('data'))
           return rawData['data'] as List;
-        }
+        if (rawData is Map && rawData.containsKey('partners'))
+          return rawData['partners'] as List;
       }
       return [];
     } catch (e) {
-      debugPrint("Error Fetching: $e");
+      debugPrint("خطأ في جلب البيانات: $e");
       return [];
     }
   }
 
-  // حفظ الشريك وتحديث القائمة فوراً
-  Future<void> _savePartner() async {
+  // ✅ تم تعديل دالة الحفظ والتعديل لتستخدم queryParameters عند التعديل
+  Future<void> _saveOrUpdatePartner() async {
     if (companyNameController.text.isEmpty || phoneController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("الرجاء ملء البيانات الأساسية")),
-      );
+      _showSnackBar("الرجاء ملء البيانات", Colors.orange);
       return;
     }
 
     setState(() => isLoading = true);
-
     try {
-      const String url =
-          "https://roger-unimplored-luella.ngrok-free.dev/api/partners/add";
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
       Map<String, dynamic> data = {
         "company_name": companyNameController.text,
-        "partner_type": typeController.text.contains("مورد")
-            ? "supplier"
-            : "customer",
+        "partner_type": selectedType,
         "phone_number": phoneController.text,
       };
 
-      var response = await Dio().post(
+      Response response;
+      if (isEditing) {
+        // ✅ التعديل: إرسال الـ ID كـ Parameter ليتوافق مع ?id=
+        response = await Dio().put(
+          "${ApiEndpoints.baseUrl}/partners/update",
+          queryParameters: {"id": currentPartnerId},
+          data: data,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
+      } else {
+        // الإضافة كما هي
+        response = await Dio().post(
+          ApiEndpoints.addPartner,
+          data: data,
+          options: Options(headers: {"Authorization": "Bearer $token"}),
+        );
+      }
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final String msg = isEditing
+            ? "تم التعديل بنجاح ✓"
+            : "تمت الإضافة بنجاح ✓";
+        _resetForm();
+        if (mounted) {
+          _refreshPartners();
+          _showSnackBar(msg, Colors.green);
+        }
+      }
+    } catch (e) {
+      _showSnackBar("فشل في إتمام العملية", Colors.red);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
+
+  // ✅ تم تعديل دالة الحذف لتستخدم queryParameters بناءً على صورك الأخيرة
+  Future<void> _deletePartner(int id) async {
+    try {
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      // الرابط الأساسي بدون ID في آخره
+      final String url = "${ApiEndpoints.baseUrl}/partners/delete";
+      debugPrint("محاولة حذف ID: $id عبر Query Parameter");
+
+      var response = await Dio().delete(
         url,
-        data: data,
+        queryParameters: {"id": id}, // ✅ هذا هو التعديل المطلوب ليكون ?id=
         options: Options(
           headers: {
             "Accept": "application/json",
             "ngrok-skip-browser-warning": "true",
+            "Authorization": "Bearer $token",
           },
+          validateStatus: (status) => status! < 500,
         ),
       );
 
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("تمت إضافة الشريك بنجاح")),
-          );
-        }
+      debugPrint("Status: ${response.statusCode}");
+      debugPrint("Response: ${response.data}");
 
-        // تنظيف الحقول
-        companyNameController.clear();
-        phoneController.clear();
-        typeController.clear();
-
-        // تحديث الواجهة وإعادة جلب البيانات فوراً
-        setState(() {
-          isAdding = false;
-          _partnersFuture = _fetchPartnersFromApi();
-        });
+      if (response.statusCode == 200) {
+        _showSnackBar("تم حذف الشريك بنجاح", Colors.green);
+        _refreshPartners();
+      } else {
+        //
+        _showSnackBar(
+          "فشل الحذف: ${response.data['message'] ?? response.statusCode}",
+          Colors.red,
+        );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("خطأ في الاتصال: $e")));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => isLoading = false);
-      }
+      debugPrint("خطأ في الحذف: $e");
+      _showSnackBar("حدث خطأ غير متوقع", Colors.red);
     }
+  }
+
+  void _showOptions(Map<String, dynamic> partner) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.edit, color: Colors.blue),
+                title: const Text(
+                  "تعديل البيانات",
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _prepareEdit(partner);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text(
+                  "حذف الشريك",
+                  style: TextStyle(fontFamily: 'Cairo'),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _deletePartner(partner['id']);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _prepareEdit(Map<String, dynamic> partner) {
+    setState(() {
+      isEditing = true;
+      isAdding = true;
+      currentPartnerId = partner['id'];
+      companyNameController.text = partner['company_name'];
+      phoneController.text = partner['phone_number'];
+      selectedType = partner['partner_type'];
+    });
+  }
+
+  void _resetForm() {
+    setState(() {
+      isAdding = false;
+      isEditing = false;
+      currentPartnerId = null;
+      companyNameController.clear();
+      phoneController.clear();
+      selectedType = "customer";
+    });
+  }
+
+  void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontFamily: 'Cairo')),
+        backgroundColor: color,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   @override
@@ -137,6 +248,7 @@ class _PartnersScreenState extends State<PartnersScreen> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        automaticallyImplyLeading: false,
         title: const Text(
           "الشركاء (موردين وزبائن)",
           style: TextStyle(
@@ -147,18 +259,15 @@ class _PartnersScreenState extends State<PartnersScreen> {
           ),
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: GestureDetector(
-              onTap: () => setState(() => isAdding = !isAdding),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: activeBlue,
-                child: Icon(
-                  isAdding ? Icons.close : Icons.add,
-                  color: Colors.white,
-                  size: 20,
-                ),
+          IconButton(
+            onPressed: () =>
+                isAdding ? _resetForm() : setState(() => isAdding = true),
+            icon: CircleAvatar(
+              backgroundColor: activeBlue,
+              child: Icon(
+                isAdding ? Icons.close : Icons.add,
+                color: Colors.white,
+                size: 20,
               ),
             ),
           ),
@@ -169,44 +278,40 @@ class _PartnersScreenState extends State<PartnersScreen> {
         child: RefreshIndicator(
           onRefresh: () async => _refreshPartners(),
           child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             children: [
-              if (isAdding) ...[
-                _buildAddPartnerForm(),
-                const SizedBox(height: 20),
-              ],
-
+              if (isAdding) _buildForm(),
+              const SizedBox(height: 10),
               FutureBuilder<List<dynamic>>(
                 future: _partnersFuture,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting)
                     return const Center(
                       child: Padding(
-                        padding: EdgeInsets.all(40.0),
+                        padding: EdgeInsets.all(50),
                         child: CircularProgressIndicator(),
                       ),
                     );
-                  }
 
                   final partners = snapshot.data ?? [];
-
-                  if (partners.isEmpty) {
-                    return _buildEmptyState();
-                  }
+                  if (partners.isEmpty) return _buildEmptyState();
 
                   return ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: partners.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 12),
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
                     itemBuilder: (context, index) {
                       final p = partners[index];
-                      return _buildPartnerCard(
-                        name: p['company_name'] ?? "بدون اسم",
-                        phone: p['phone_number'] ?? "بدون رقم",
-                        type: p['partner_type'] == 'supplier' ? "مورد" : "زبون",
+                      return GestureDetector(
+                        onTap: () => _showOptions(p),
+                        child: _buildPartnerCard(
+                          name: p['company_name'] ?? "بدون اسم",
+                          phone: p['phone_number'] ?? "بدون رقم",
+                          type: p['partner_type'] == 'supplier'
+                              ? "مورد"
+                              : "زبون",
+                        ),
                       );
                     },
                   );
@@ -219,66 +324,45 @@ class _PartnersScreenState extends State<PartnersScreen> {
     );
   }
 
-  // --- مساعدات بناء الواجهة ---
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        children: [
-          const SizedBox(height: 50),
-          Icon(Icons.person_search, size: 80, color: Colors.grey.shade300),
-          const SizedBox(height: 10),
-          const Text(
-            "لا يوجد شركاء مضافين حالياً في السيرفر",
-            style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAddPartnerForm() {
+  Widget _buildForm() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: activeBlue.withOpacity(0.5), width: 2),
+        border: Border.all(color: activeBlue.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
       ),
       child: Column(
         children: [
-          Text(
-            "إضافة شريك جديد",
-            style: TextStyle(
-              fontFamily: 'Cairo',
-              color: activeBlue,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+          _buildTextField("اسم الشركة", companyNameController, Icons.business),
+          const SizedBox(height: 12),
+          _buildTextField(
+            "رقم الهاتف",
+            phoneController,
+            Icons.phone,
+            isPhone: true,
           ),
           const SizedBox(height: 15),
-          _buildTextField("اسم الشركة", companyNameController),
-          const SizedBox(height: 10),
           Row(
             children: [
-              Expanded(
-                child: _buildTextField("الوصف (مورد/زبون)", typeController),
+              const Text(
+                "النوع:",
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 14),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: _buildTextField(
-                  "رقم الهاتف",
-                  phoneController,
-                  isPhone: true,
-                ),
-              ),
+              const SizedBox(width: 15),
+              _typeOption("زبون", "customer"),
+              _typeOption("مورد", "supplier"),
             ],
           ),
-          const SizedBox(height: 15),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
+            height: 48,
             child: ElevatedButton(
-              onPressed: isLoading ? null : _savePartner,
+              onPressed: isLoading ? null : _saveOrUpdatePartner,
               style: ElevatedButton.styleFrom(
                 backgroundColor: activeBlue,
                 shape: RoundedRectangleBorder(
@@ -286,12 +370,20 @@ class _PartnersScreenState extends State<PartnersScreen> {
                 ),
               ),
               child: isLoading
-                  ? const CircularProgressIndicator(color: Colors.white)
-                  : const Text(
-                      "تأكيد",
-                      style: TextStyle(
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        color: Colors.white,
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : Text(
+                      isEditing ? "حفظ التعديلات" : "تأكيد وحفظ",
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
                         color: Colors.white,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
             ),
@@ -301,9 +393,33 @@ class _PartnersScreenState extends State<PartnersScreen> {
     );
   }
 
+  Widget _typeOption(String label, String value) {
+    bool isSelected = selectedType == value;
+    return GestureDetector(
+      onTap: () => setState(() => selectedType = value),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? activeBlue : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(25),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            color: isSelected ? Colors.white : Colors.black54,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTextField(
     String hint,
-    TextEditingController controller, {
+    TextEditingController controller,
+    IconData icon, {
     bool isPhone = false,
   }) {
     return TextField(
@@ -311,10 +427,28 @@ class _PartnersScreenState extends State<PartnersScreen> {
       textAlign: TextAlign.right,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
       decoration: InputDecoration(
+        prefixIcon: Icon(icon, size: 20, color: activeBlue),
         hintText: hint,
         hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Column(
+      children: [
+        const SizedBox(height: 60),
+        Icon(Icons.people_outline, size: 70, color: Colors.grey.shade300),
+        const Text(
+          "لا يوجد بيانات لعرضها حالياً",
+          style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+        ),
+      ],
     );
   }
 
@@ -327,12 +461,15 @@ class _PartnersScreenState extends State<PartnersScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100),
       ),
       child: Row(
         children: [
-          const Icon(Icons.business, color: Colors.blueGrey, size: 40),
+          CircleAvatar(
+            backgroundColor: activeBlue.withOpacity(0.1),
+            child: Icon(Icons.person, color: activeBlue),
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
@@ -343,7 +480,6 @@ class _PartnersScreenState extends State<PartnersScreen> {
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
                   ),
                 ),
                 Text(
@@ -351,22 +487,29 @@ class _PartnersScreenState extends State<PartnersScreen> {
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     color: textGrey,
-                    fontSize: 13,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
           ),
-          Chip(
-            label: Text(
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: type == "مورد"
+                  ? Colors.orange.shade50
+                  : Colors.green.shade50,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
               type,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 11,
-                color: Colors.white,
+                color: type == "مورد" ? Colors.orange : Colors.green,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            backgroundColor: type == "مورد" ? activeBlue : Colors.green,
           ),
         ],
       ),

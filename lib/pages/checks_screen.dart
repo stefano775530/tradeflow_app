@@ -17,11 +17,12 @@ class _ChecksScreenState extends State<ChecksScreen> {
   List checks = [];
   bool _isLoading = true;
 
-  final Color greenColor = const Color(0xFF20E070);
-  final Color redColor = const Color(0xFFFF2020);
-  final Color statusBgColor = const Color(0xFFFFEB9B);
-  final Color statusTextColor = const Color(0xFFC0A000);
-  final Color activeBlue = const Color(0xFF446BC0);
+  // ✅ الثوابت اللونية (كما هي في كودك)
+  static const Color greenColor = Color(0xFF20E070);
+  static const Color redColor = Color(0xFFFF2020);
+  static const Color statusBgColor = Color(0xFFFFEB9B);
+  static const Color statusTextColor = Color(0xFFC0A000);
+  static const Color activeBlue = Color(0xFF446BC0);
 
   @override
   void initState() {
@@ -29,6 +30,7 @@ class _ChecksScreenState extends State<ChecksScreen> {
     fetchChecks();
   }
 
+  // --- دالة جلب البيانات ---
   Future<void> fetchChecks() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
@@ -46,25 +48,34 @@ class _ChecksScreenState extends State<ChecksScreen> {
 
       if (response.statusCode == 200) {
         var responseData = jsonDecode(response.body);
-        setState(() {
-          if (responseData is Map) {
-            checks = responseData['checks'] ?? responseData['data'] ?? [];
-          } else if (responseData is List) {
-            checks = responseData;
-          }
-        });
+        if (mounted) {
+          setState(() {
+            if (responseData is Map) {
+              checks = responseData['checks'] ?? responseData['data'] ?? [];
+            } else if (responseData is List) {
+              checks = responseData;
+            }
+          });
+        }
+      } else {
+        _showErrorSnackBar("فشل تحميل البيانات، يرجى المحاولة مجدداً");
       }
     } catch (e) {
       debugPrint("Error fetching checks: $e");
+      _showErrorSnackBar("تعذر الاتصال بالخادم");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
+  // ✅ دالة التحديث (معدلة بالكامل لحل الـ 404)
   Future<void> _updateCheckStatus(
     Map<String, dynamic> check,
     String newStatus,
   ) async {
+    final String oldStatus = check["status"];
+    final dynamic checkId = check["id"];
+
     setState(() {
       check["status"] = newStatus;
     });
@@ -73,31 +84,60 @@ class _ChecksScreenState extends State<ChecksScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
+      final requestBody = jsonEncode({"status": newStatus});
+
+      // تصحيح المسار بإضافة /api/ ليتوافق مع السيرفر
+      String updateUrl = "${ApiEndpoints.baseUrl}/api/checks/$checkId";
+
       var response = await http.put(
-        Uri.parse(ApiEndpoints.addCheck),
+        Uri.parse(updateUrl),
         headers: {
           "Authorization": "Bearer $token",
           "Accept": "application/json",
           "Content-Type": "application/json",
         },
-        body: jsonEncode({"id": check["id"], "status": newStatus}),
+        body: requestBody,
       );
 
-      if (response.statusCode != 200 && response.statusCode != 201) {
-        await fetchChecks();
+      if (response.statusCode == 200 ||
+          response.statusCode == 201 ||
+          response.statusCode == 204) {
+        final int idx = checks.indexWhere((c) => c["id"] == checkId);
+        if (idx != -1 && mounted) {
+          setState(() {
+            checks[idx]["status"] = newStatus;
+          });
+        }
+        _showSuccessSnackBar(
+          newStatus == "collected"
+              ? "تم تحويل الشيك إلى محصل"
+              : "تم إعادة الشيك إلى قيد الانتظار",
+        );
+      } else {
+        _revertStatus(checkId, oldStatus);
+        _showErrorSnackBar("فشل تحديث الحالة (${response.statusCode})");
       }
     } catch (e) {
-      await fetchChecks();
+      _revertStatus(checkId, oldStatus);
+      _showErrorSnackBar("تعذر الاتصال بالخادم");
     }
   }
 
+  void _revertStatus(dynamic id, String oldStatus) {
+    final int idx = checks.indexWhere((c) => c["id"] == id);
+    if (idx != -1 && mounted) {
+      setState(() => checks[idx]["status"] = oldStatus);
+    }
+  }
+
+  // ✅ دالة الحذف (معدلة لضمان المسار الصحيح)
   Future<void> _deleteCheck(dynamic id) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
       var response = await http.delete(
-        Uri.parse("${ApiEndpoints.baseUrl}/checks/$id"),
+        Uri.parse("${ApiEndpoints.baseUrl}/api/checks/$id"),
         headers: {
           "Authorization": "Bearer $token",
           "Accept": "application/json",
@@ -105,13 +145,50 @@ class _ChecksScreenState extends State<ChecksScreen> {
       );
 
       if (response.statusCode == 200 || response.statusCode == 204) {
+        _showSuccessSnackBar("تم حذف الشيك بنجاح");
         fetchChecks();
+      } else {
+        _showErrorSnackBar("فشل حذف الشيك (${response.statusCode})");
       }
     } catch (e) {
-      debugPrint("Error deleting check: $e");
+      _showErrorSnackBar("تعذر الاتصال بالخادم");
     }
   }
 
+  // --- عرض رسائل تنبيهية ---
+  void _showErrorSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontFamily: 'Cairo'),
+          textAlign: TextAlign.right,
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _showSuccessSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(fontFamily: 'Cairo'),
+          textAlign: TextAlign.right,
+        ),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // --- الـ Dialogs كاملة كما هي في ملفك ---
   void _confirmDelete(dynamic id) {
     showDialog(
       context: context,
@@ -146,7 +223,6 @@ class _ChecksScreenState extends State<ChecksScreen> {
     );
   }
 
-  // --- دالة عرض تفاصيل الشيك الكاملة ---
   void _showCheckDetailsDialog(Map<String, dynamic> check) {
     showDialog(
       context: context,
@@ -238,6 +314,7 @@ class _ChecksScreenState extends State<ChecksScreen> {
     );
   }
 
+  // --- القائمة المنبثقة (BottomSheet) ---
   void _showCheckOptions(int index) {
     showModalBottomSheet(
       context: context,
@@ -247,15 +324,13 @@ class _ChecksScreenState extends State<ChecksScreen> {
       builder: (context) {
         final check = checks[index];
         bool isCollected = check["status"] == "collected";
-
         return Container(
           padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // الخيار الجديد: عرض البيانات الكاملة
               ListTile(
-                leading: Icon(Icons.visibility, color: activeBlue),
+                leading: const Icon(Icons.visibility, color: activeBlue),
                 title: const Text(
                   "عرض البيانات الكاملة",
                   style: TextStyle(fontFamily: 'Cairo'),
@@ -317,6 +392,7 @@ class _ChecksScreenState extends State<ChecksScreen> {
     );
   }
 
+  // --- بناء الواجهة (Build UI) ---
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -337,25 +413,10 @@ class _ChecksScreenState extends State<ChecksScreen> {
         foregroundColor: Colors.black,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator(color: activeBlue))
           : RefreshIndicator(
               onRefresh: fetchChecks,
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 10,
-                ),
-                itemCount: checks.length,
-                itemBuilder: (context, index) {
-                  return GestureDetector(
-                    onTap: () => _showCheckOptions(index),
-                    child: _buildCheckCard(
-                      check: checks[index],
-                      isOutgoing: checks[index]["type"] == "صادر",
-                    ),
-                  );
-                },
-              ),
+              child: checks.isEmpty ? _buildEmptyState() : _buildChecksList(),
             ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
@@ -368,6 +429,55 @@ class _ChecksScreenState extends State<ChecksScreen> {
         backgroundColor: activeBlue,
         child: const Icon(Icons.add, color: Colors.white, size: 30),
       ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return ListView(
+      children: const [
+        SizedBox(height: 200),
+        Center(
+          child: Column(
+            children: [
+              Icon(Icons.folder_open, size: 70, color: Colors.grey),
+              SizedBox(height: 16),
+              Text(
+                "لا توجد شيكات حتى الآن",
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 18,
+                  color: Colors.grey,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                "اضغط على + لإضافة شيك جديد",
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChecksList() {
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      itemCount: checks.length,
+      itemBuilder: (context, index) {
+        return GestureDetector(
+          onTap: () => _showCheckOptions(index),
+          child: _buildCheckCard(
+            check: checks[index],
+            isOutgoing: checks[index]["type"] == "صادر",
+          ),
+        );
+      },
     );
   }
 
