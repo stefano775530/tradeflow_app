@@ -108,7 +108,7 @@ class _AddCheckScreenState extends State<AddCheckScreen> {
       if (_isEditMode) {
         data["id"] = widget.checkToEdit!['id'];
         response = await http.patch(
-          Uri.parse(ApiEndpoints.addCheck),
+          Uri.parse(ApiEndpoints.addCheck + "/${widget.checkToEdit!['id']}"),
           headers: {
             "Authorization": "Bearer $token",
             "Content-Type": "application/json",
@@ -127,6 +127,9 @@ class _AddCheckScreenState extends State<AddCheckScreen> {
           body: jsonEncode(data),
         );
       }
+
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showSnackBar(

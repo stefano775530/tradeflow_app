@@ -69,6 +69,165 @@ class _ChecksScreenState extends State<ChecksScreen> {
   }
 
   // ✅ دالة التحديث (معدلة بالكامل لحل الـ 404)
+  // Future<void> _updateCheckStatus(
+  //   Map<String, dynamic> check,
+  //   String newStatus,
+  // ) async {
+  //   final String oldStatus = check["status"];
+  //   final dynamic checkId = check["id"];
+
+  //   setState(() {
+  //     check["status"] = newStatus;
+  //   });
+
+  //   try {
+  //     SharedPreferences prefs = await SharedPreferences.getInstance();
+  //     String? token = prefs.getString("token");
+
+  //     final requestBody = jsonEncode({"status": newStatus});
+
+  //     // تصحيح المسار بإضافة /api/ ليتوافق مع السيرفر
+  //     String updateUrl = "${ApiEndpoints.baseUrl}/api/checks/$checkId";
+
+  //     var response = await http.put(
+  //       Uri.parse(updateUrl),
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //         "Accept": "application/json",
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: requestBody,
+  //     );
+
+  //     if (response.statusCode == 200 ||
+  //         response.statusCode == 201 ||
+  //         response.statusCode == 204) {
+  //       final int idx = checks.indexWhere((c) => c["id"] == checkId);
+  //       if (idx != -1 && mounted) {
+  //         setState(() {
+  //           checks[idx]["status"] = newStatus;
+  //         });
+  //       }
+  //       _showSuccessSnackBar(
+  //         newStatus == "cashed"
+  //             ? "تم تحويل الشيك إلى محصل"
+  //             : "تم إعادة الشيك إلى قيد الانتظار",
+  //       );
+  //     } else {
+  //       _revertStatus(checkId, oldStatus);
+  //       _showErrorSnackBar("فشل تحديث الحالة (${response.statusCode})");
+  //     }
+  //   } catch (e) {
+  //     _revertStatus(checkId, oldStatus);
+  //     _showErrorSnackBar("تعذر الاتصال بالخادم");
+  //   }
+  // }
+
+  // void _revertStatus(dynamic id, String oldStatus) {
+  //   final int idx = checks.indexWhere((c) => c["id"] == id);
+  //   if (idx != -1 && mounted) {
+  //     setState(() => checks[idx]["status"] = oldStatus);
+  //   }
+  // }
+
+  // Future<void> _updateCheckStatus(
+  //   Map<String, dynamic> check,
+  //   String newStatus,
+  // ) async {
+  //   final String oldStatus = check["status"];
+  //   final dynamic checkId = check["id"];
+
+  //   setState(() {
+  //     check["status"] = newStatus;
+  //   });
+
+  //   try {
+  //     SharedPreferences prefs = await SharedPreferences.getInstance();
+  //     String? token = prefs.getString("token");
+
+  //     // 🔥 تحويل type من عربي لإنجليزي
+  //     String typeValue;
+  //     if (check["type"] == "وارد") {
+  //       typeValue = "وارد";
+  //     } else if (check["type"] == "صادر") {
+  //       typeValue = "صادر";
+  //     } else {
+  //       typeValue = check["type"];
+  //     }
+
+  //     // 🔥 البودي الجديد
+  //     // final requestBody = jsonEncode({
+  //     //   "issue_date": check["issue_date"], // أو من controller إذا عندك
+  //     //   "cashing_date": DateTime.now().toString().split(
+  //     //     " ",
+  //     //   )[0], // تاريخ اليوم (YYYY-MM-DD)
+  //     //   "status": newStatus, // cashed / pending / ...
+  //     //   "type": typeValue,
+  //     // });
+  //     Map<String, dynamic> body = {
+  //       "issue_date": check["issue_date"],
+  //       "status": newStatus,
+  //       "type": typeValue,
+  //     };
+
+  //     // ✅ أضيفي cashing_date فقط إذا الحالة cashed
+  //     if (newStatus == "cashed") {
+  //       body["cashing_date"] = DateTime.now().toString().split(" ")[0];
+  //     } else {
+  //       body.remove("cashing_date");
+  //     }
+
+  //     final requestBody = jsonEncode(body);
+  //     // print("REQUEST BODY: ${jsonEncode(body)}");
+
+  //     String updateUrl = "${ApiEndpoints.baseUrl}/checks/$checkId";
+
+  //     var response = await http.patch(
+  //       Uri.parse(updateUrl),
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //         "Accept": "application/json",
+  //         "Content-Type": "application/json",
+  //       },
+  //       body: requestBody,
+  //     );
+
+  //     // 👇 مهم جداً للتشخيص
+  //     print("STATUS: ${response.statusCode}");
+  //     print("BODY: ${response.body}");
+  //     print("REQUEST BODY: ${jsonEncode(body)}");
+  //     if (response.statusCode == 200 ||
+  //         response.statusCode == 201 ||
+  //         response.statusCode == 204) {
+  //       final int idx = checks.indexWhere((c) => c["id"] == checkId);
+  //       if (idx != -1 && mounted) {
+  //         setState(() {
+  //           checks[idx]["status"] = newStatus;
+  //         });
+  //       }
+
+  //       _showSuccessSnackBar(
+  //         newStatus == "cashed"
+  //             ? "تم تحويل الشيك إلى مصروف"
+  //             : "تم تحديث الحالة بنجاح",
+  //       );
+  //     } else {
+  //       _revertStatus(checkId, oldStatus);
+  //       _showErrorSnackBar("فشل تحديث الحالة (${response.statusCode})");
+  //     }
+  //   } catch (e) {
+  //     _revertStatus(checkId, oldStatus);
+  //     _showErrorSnackBar("تعذر الاتصال بالخادم");
+  //   }
+  // }
+
+  void _revertStatus(dynamic id, String oldStatus) {
+    final int idx = checks.indexWhere((c) => c["id"] == id);
+    if (idx != -1 && mounted) {
+      setState(() => checks[idx]["status"] = oldStatus);
+    }
+  }
+
   Future<void> _updateCheckStatus(
     Map<String, dynamic> check,
     String newStatus,
@@ -84,12 +243,36 @@ class _ChecksScreenState extends State<ChecksScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      final requestBody = jsonEncode({"status": newStatus});
+      // 🔥 تحويل type من عربي لإنجليزي
+      String typeValue;
+      if (check["type"] == "وارد") {
+        typeValue = "وارد";
+      } else if (check["type"] == "صادر") {
+        typeValue = "صادر";
+      } else {
+        typeValue = check["type"];
+      }
 
-      // تصحيح المسار بإضافة /api/ ليتوافق مع السيرفر
-      String updateUrl = "${ApiEndpoints.baseUrl}/api/checks/$checkId";
+      // 🚨 تنظيف أي قيمة قديمة (مهم جداً)
+      check.remove("cashing_date");
 
-      var response = await http.put(
+      // 🔥 بناء body نظيف
+      Map<String, dynamic> body = {
+        "issue_date": check["issue_date"],
+        "status": newStatus,
+        "type": typeValue,
+      };
+
+      // ✅ إضافة cashing_date فقط إذا cashed
+      if (newStatus == "cashed") {
+        body["cashing_date"] = DateTime.now().toString().split(" ")[0];
+      }
+
+      final requestBody = jsonEncode(body);
+
+      String updateUrl = "${ApiEndpoints.baseUrl}/checks/$checkId";
+
+      var response = await http.patch(
         Uri.parse(updateUrl),
         headers: {
           "Authorization": "Bearer $token",
@@ -99,19 +282,34 @@ class _ChecksScreenState extends State<ChecksScreen> {
         body: requestBody,
       );
 
+      // 🔥 debug مهم
+      print("STATUS: ${response.statusCode}");
+      print("BODY: ${response.body}");
+      print("REQUEST: $requestBody");
+
       if (response.statusCode == 200 ||
           response.statusCode == 201 ||
           response.statusCode == 204) {
         final int idx = checks.indexWhere((c) => c["id"] == checkId);
+
         if (idx != -1 && mounted) {
           setState(() {
             checks[idx]["status"] = newStatus;
+
+            if (newStatus == "cashed") {
+              checks[idx]["cashing_date"] = DateTime.now().toString().split(
+                " ",
+              )[0];
+            } else {
+              checks[idx].remove("cashing_date");
+            }
           });
         }
+
         _showSuccessSnackBar(
-          newStatus == "collected"
-              ? "تم تحويل الشيك إلى محصل"
-              : "تم إعادة الشيك إلى قيد الانتظار",
+          newStatus == "cashed"
+              ? "تم تحويل الشيك إلى مصروف"
+              : "تم تحديث الحالة بنجاح",
         );
       } else {
         _revertStatus(checkId, oldStatus);
@@ -120,13 +318,6 @@ class _ChecksScreenState extends State<ChecksScreen> {
     } catch (e) {
       _revertStatus(checkId, oldStatus);
       _showErrorSnackBar("تعذر الاتصال بالخادم");
-    }
-  }
-
-  void _revertStatus(dynamic id, String oldStatus) {
-    final int idx = checks.indexWhere((c) => c["id"] == id);
-    if (idx != -1 && mounted) {
-      setState(() => checks[idx]["status"] = oldStatus);
     }
   }
 
@@ -323,7 +514,7 @@ class _ChecksScreenState extends State<ChecksScreen> {
       ),
       builder: (context) {
         final check = checks[index];
-        bool isCollected = check["status"] == "collected";
+        bool isCollected = check["status"] == "cashed";
         return Container(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -368,10 +559,7 @@ class _ChecksScreenState extends State<ChecksScreen> {
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _updateCheckStatus(
-                    check,
-                    isCollected ? "pending" : "collected",
-                  );
+                  _updateCheckStatus(check, isCollected ? "pending" : "cashed");
                 },
               ),
               ListTile(

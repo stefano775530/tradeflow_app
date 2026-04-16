@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:tradeflow_app/pages/Operation_screen.dart';
 import 'warehouses_screen.dart';
 import 'partners_screen.dart';
-import 'transactions_screen.dart';
 import 'checks_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,13 +18,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // القائمة تضم الصفحات بالترتيب الصحيح لضمان فتح القائمة أولاً
+    // التعديل هنا لضمان فتح صفحة "العمليات" الأساسية
     final List<Widget> pages = [
       _buildModernHomeContent(), // Index 0
       const PartnersScreen(), // Index 1
-      const TransactionsScreen(), // Index 2
+      const OperationScreen(), // Index 2 - يتوجه لملف operation_screen.dart
       const WarehousesScreen(), // Index 3
-      const ChecksScreen(), // Index 4 (هنا سيفتح ملف الشيكات الذي أرسلته)
+      const ChecksScreen(), // Index 4
     ];
 
     return Scaffold(
@@ -37,7 +37,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildModernHomeContent() {
     return Column(
       children: [
-        // ===== الهيدر (Header) مع الرسمة المتموجة =====
+        // ===== الهيدر (Header) =====
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -88,7 +88,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // ===== المحتوى (Content) المربعات والقوائم =====
+        // ===== المحتوى (المربعات والقوائم) =====
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -114,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         "الشيكات",
                         Icons.account_balance_wallet_outlined,
                         4,
-                      ), // يوجه للـ Index 4
+                      ),
                       _buildGridCard("العمليات", Icons.swap_horiz_rounded, 2),
                       _buildGridCard("الشركاء", Icons.people_outline, 1),
                     ],
@@ -151,7 +151,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- دوابل بناء الواجهة (نفس كودك الأصلي تماماً) ---
+  // --- دوال بناء الواجهة المساعدة ---
+
   Widget _buildNotificationIcon() {
     return Stack(
       clipBehavior: Clip.none,
@@ -342,7 +343,11 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-// الكلاس المسؤول عن الرسمة في الهيدر (TopoPainter)
+class Operation {
+  const Operation();
+}
+
+// الرسام الخاص بالهيدر
 class _TopoPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {

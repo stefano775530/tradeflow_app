@@ -14,6 +14,7 @@ class ApiEndpoints {
   static const String addPartner = "$baseUrl/partners/add";
   static const String getPartners = "$baseUrl/partners/all";
   static const String deletePartner = "$baseUrl/partners/delete";
+  static const String updatePartner = "$baseUrl/partners/update";
 
   static const String addCheck = "$baseUrl/checks";
   static const String getChecks = "$baseUrl/checks";
