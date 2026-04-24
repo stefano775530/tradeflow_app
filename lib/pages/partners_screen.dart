@@ -1,5 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
-import 'package:dio/dio.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tradeflow_app/pages/link.dart';
 
@@ -42,19 +44,16 @@ class _PartnersScreenState extends State<PartnersScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      var response = await Dio().get(
-        ApiEndpoints.getPartners,
-        options: Options(
-          headers: {
-            "Accept": "application/json",
-            "ngrok-skip-browser-warning": "true",
-            "Authorization": "Bearer $token",
-          },
-        ),
+      var response = await http.get(
+        Uri.parse("${ApiEndpoints.getPartners}"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
       );
 
       if (response.statusCode == 200) {
-        var rawData = response.data;
+        var rawData = jsonDecode(response.body);
         if (rawData is List) return rawData;
         if (rawData is Map && rawData.containsKey('data'))
           return rawData['data'] as List;
@@ -66,9 +65,6 @@ class _PartnersScreenState extends State<PartnersScreen> {
       return [];
     }
   }
-
-  // ✅ الدالة المحدثة التي تستدعي الروابط من link.dart
-  // فقط عدّل هذا الجزء داخل _saveOrUpdatePartner()
 
   Future<void> _saveOrUpdatePartner() async {
     if (companyNameController.text.isEmpty || phoneController.text.isEmpty) {
@@ -88,33 +84,25 @@ class _PartnersScreenState extends State<PartnersScreen> {
         "phone_number": phoneController.text,
       };
 
-      Response response;
+      var response;
 
       if (isEditing) {
-        // ✅ تم تعديل PUT إلى POST
-        response = await Dio().post(
-          ApiEndpoints.updatePartner,
-          queryParameters: {"id": currentPartnerId},
-          data: data,
-          options: Options(
-            headers: {
-              "Authorization": "Bearer $token",
-              "Accept": "application/json",
-            },
-            validateStatus: (status) => status! < 500,
-          ),
+        response = await http.patch(
+          Uri.parse("${ApiEndpoints.baseUrl}/partners/${currentPartnerId!}"),
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode(data),
         );
       } else {
-        response = await Dio().post(
-          ApiEndpoints.addPartner,
-          data: data,
-          options: Options(
-            headers: {
-              "Authorization": "Bearer $token",
-              "Accept": "application/json",
-            },
-            validateStatus: (status) => status! < 500,
-          ),
+        response = await http.post(
+          Uri.parse("${ApiEndpoints.addPartner}"),
+          headers: {
+            "Authorization": "Bearer $token",
+            "Content-Type": "application/json",
+          },
+          body: jsonEncode(data),
         );
       }
 
@@ -127,12 +115,18 @@ class _PartnersScreenState extends State<PartnersScreen> {
           Colors.green,
         );
       } else {
-        String msg =
-            response.data['message'] ?? "فشلت العملية (${response.statusCode})";
+        String msg;
+        try {
+          final resBody = jsonDecode(response.body);
+          msg = resBody['message'] ?? "فشلت العملية (${response.statusCode})";
+        } catch (e) {
+          msg = "فشلت العملية (${response.statusCode})";
+        }
 
         _showSnackBar(msg, Colors.red);
       }
     } catch (e) {
+      debugPrint("Error saving/updating: $e");
       _showSnackBar("حدث خطأ في الاتصال", Colors.red);
     } finally {
       if (mounted) setState(() => isLoading = false);
@@ -144,10 +138,12 @@ class _PartnersScreenState extends State<PartnersScreen> {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       String? token = prefs.getString("token");
 
-      var response = await Dio().delete(
-        ApiEndpoints.deletePartner,
-        queryParameters: {"id": id},
-        options: Options(headers: {"Authorization": "Bearer $token"}),
+      var response = await http.delete(
+        Uri.parse("${ApiEndpoints.baseUrl}/partners/$id"),
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+        },
       );
 
       if (response.statusCode == 200) {
@@ -155,6 +151,7 @@ class _PartnersScreenState extends State<PartnersScreen> {
         _refreshPartners();
       }
     } catch (e) {
+      debugPrint("Error deleting partner: $e");
       _showSnackBar("خطأ في الحذف", Colors.red);
     }
   }
@@ -426,25 +423,38 @@ class _PartnersScreenState extends State<PartnersScreen> {
     );
   }
 
+  // ✅ تم تكبير العناصر هنا في هذه الدالة
   Widget _buildPartnerCard({
     required String name,
     required String phone,
     required String type,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(16), // زيادة المساحة الداخلية
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(15),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           CircleAvatar(
+            radius: 26, // تكبير دائرة الأيقونة
             backgroundColor: activeBlue.withOpacity(0.1),
-            child: Icon(Icons.person, color: activeBlue),
+            child: Icon(
+              Icons.person,
+              color: activeBlue,
+              size: 28,
+            ), // تكبير الأيقونة
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -454,33 +464,41 @@ class _PartnersScreenState extends State<PartnersScreen> {
                   style: const TextStyle(
                     fontFamily: 'Cairo',
                     fontWeight: FontWeight.bold,
+                    fontSize: 18, // تكبير حجم الخط للاسم
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   phone,
                   style: TextStyle(
                     fontFamily: 'Cairo',
                     color: textGrey,
-                    fontSize: 12,
+                    fontSize: 15, // تكبير حجم الخط للرقم
                   ),
                 ),
               ],
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 8,
+            ), // تكبير مساحة التاغ
             decoration: BoxDecoration(
               color: type == "مورد"
                   ? Colors.orange.shade50
                   : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: Text(
               type,
               style: TextStyle(
                 fontFamily: 'Cairo',
-                fontSize: 11,
-                color: type == "مورد" ? Colors.orange : Colors.green,
+                fontSize: 14, // تكبير خط كلمة مورد/زبون
+                fontWeight: FontWeight.bold,
+                color: type == "مورد"
+                    ? Colors.orange.shade800
+                    : Colors.green.shade800,
               ),
             ),
           ),

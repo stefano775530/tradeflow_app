@@ -1,3 +1,414 @@
+// import 'package:flutter/material.dart';
+// import 'package:tradeflow_app/pages/Operation_screen.dart';
+// import 'warehouses_screen.dart';
+// import 'partners_screen.dart';
+// import 'checks_screen.dart';
+
+// class HomeScreen extends StatefulWidget {
+//   const HomeScreen({super.key});
+
+//   @override
+//   State<HomeScreen> createState() => _HomeScreenState();
+// }
+
+// class _HomeScreenState extends State<HomeScreen> {
+//   int _selectedIndex = 0;
+//   final Color primaryBlue = const Color(0xFF3D5EAB);
+//   final Color scaffoldBg = const Color(0xFFF8FAFF);
+
+//   @override
+//   Widget build(BuildContext context) {
+//     final List<Widget> pages = [
+//       _buildEnhancedHomeContent(),
+//       const PartnersScreen(),
+//       const OperationScreen(),
+//       const WarehousesScreen(),
+//       const ChecksScreen(),
+//     ];
+
+//     return Scaffold(
+//       backgroundColor: scaffoldBg,
+//       body: IndexedStack(index: _selectedIndex, children: pages),
+//       bottomNavigationBar: _buildBottomNav(),
+//     );
+//   }
+
+//   Widget _buildEnhancedHomeContent() {
+//     return Column(
+//       children: [
+//         // ===== الهيدر (كما هو في الكود الذي أعجبك) =====
+//         Container(
+//           width: double.infinity,
+//           height: 145,
+//           decoration: BoxDecoration(
+//             color: primaryBlue,
+//             borderRadius: const BorderRadius.only(
+//               bottomLeft: Radius.circular(45),
+//               bottomRight: Radius.circular(45),
+//             ),
+//           ),
+//           child: SafeArea(
+//             child: Padding(
+//               padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+//               child: Row(
+//                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//                 children: [
+//                   Row(
+//                     children: [
+//                       const Icon(
+//                         Icons.menu_rounded,
+//                         color: Colors.white,
+//                         size: 32,
+//                       ),
+//                       const SizedBox(width: 15),
+//                       _buildNotificationBadge(),
+//                     ],
+//                   ),
+//                   const Text(
+//                     " اهلا العميل  ",
+//                     style: TextStyle(
+//                       color: Colors.white,
+//                       fontSize: 30,
+//                       fontWeight: FontWeight.w900,
+//                       fontFamily: 'Cairo',
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//             ),
+//           ),
+//         ),
+
+//         Expanded(
+//           child: SingleChildScrollView(
+//             physics: const BouncingScrollPhysics(),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.end,
+//               children: [
+//                 const SizedBox(height: 20),
+//                 // ===== كروت القائمة الرئيسية (كما هي بدون تغيير) =====
+//                 Padding(
+//                   padding: const EdgeInsets.symmetric(horizontal: 16),
+//                   child: GridView.count(
+//                     shrinkWrap: true,
+//                     physics: const NeverScrollableScrollPhysics(),
+//                     crossAxisCount: 2,
+//                     crossAxisSpacing: 15,
+//                     mainAxisSpacing: 15,
+//                     childAspectRatio: 1.3,
+//                     children: [
+//                       _buildMainGridCard(
+//                         "الشيكات",
+//                         "2 شيكات معلقة",
+//                         Icons.account_balance_wallet_outlined,
+//                         4,
+//                       ),
+//                       _buildMainGridCard(
+//                         "المستودعات",
+//                         "3 مستودعات نشطة",
+//                         Icons.inventory_2_outlined,
+//                         3,
+//                       ),
+//                       _buildMainGridCard(
+//                         "الشركاء",
+//                         "12 شريك تجاري",
+//                         Icons.people_outline_rounded,
+//                         1,
+//                       ),
+//                       _buildMainGridCard(
+//                         "العمليات",
+//                         "7 عمليات اليوم",
+//                         Icons.swap_horiz_rounded,
+//                         2,
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+
+//                 const SizedBox(height: 30),
+
+//                 Padding(
+//                   padding: const EdgeInsets.symmetric(horizontal: 20),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.end,
+//                     children: [
+//                       _buildLabel("الأكثر مبيعاً"),
+//                       const SizedBox(height: 15),
+
+//                       // ✅ التعديل المقصود: بطاقة أصغر وأرشق
+//                       _buildFeaturedCard("خشب ديكور خارجي", "المنتج الأول"),
+
+//                       const SizedBox(height: 35),
+
+//                       _buildLabel("آخر المبيعات"),
+//                       const SizedBox(height: 15),
+//                       _buildTransactionCard(
+//                         "خشب زان أفريقي",
+//                         "2026-03-20",
+//                         "₪ 1,200 +",
+//                       ),
+//                       _buildTransactionCard(
+//                         "بيع 20 لوح خشب سويد",
+//                         "2026-03-20",
+//                         "₪ 2,000 +",
+//                       ),
+//                       const SizedBox(height: 50),
+//                     ],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   // الكرت الرئيسي (بدون أي تعديل)
+//   Widget _buildMainGridCard(
+//     String title,
+//     String sub,
+//     IconData icon,
+//     int index,
+//   ) {
+//     return InkWell(
+//       onTap: () => setState(() => _selectedIndex = index),
+//       child: Container(
+//         decoration: BoxDecoration(
+//           color: Colors.white,
+//           borderRadius: BorderRadius.circular(28),
+//           boxShadow: [
+//             BoxShadow(
+//               color: Colors.black.withOpacity(0.04),
+//               blurRadius: 20,
+//               offset: const Offset(0, 10),
+//             ),
+//           ],
+//         ),
+//         child: Column(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: [
+//             Container(
+//               padding: const EdgeInsets.all(12),
+//               decoration: BoxDecoration(
+//                 color: primaryBlue.withOpacity(0.08),
+//                 shape: BoxShape.circle,
+//               ),
+//               child: Icon(icon, color: primaryBlue, size: 30),
+//             ),
+//             const SizedBox(height: 12),
+//             Text(
+//               title,
+//               style: const TextStyle(
+//                 fontWeight: FontWeight.w900,
+//                 fontSize: 18,
+//                 fontFamily: 'Cairo',
+//                 color: Color(0xFF2D3243),
+//               ),
+//             ),
+//             Text(
+//               sub,
+//               style: TextStyle(
+//                 color: Colors.grey[500],
+//                 fontSize: 13,
+//                 fontFamily: 'Cairo',
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+//   // ✅ كرت المنتج الأكثر مبيعاً (تم تصغيره فقط)
+//   Widget _buildFeaturedCard(String name, String rank) {
+//     return Container(
+//       width: double.infinity,
+//       padding: const EdgeInsets.symmetric(
+//         horizontal: 20,
+//         vertical: 15,
+//       ), // تقليل الـ padding
+//       decoration: BoxDecoration(
+//         color: primaryBlue,
+//         borderRadius: BorderRadius.circular(
+//           25,
+//         ), // انحناء أنعم يتناسب مع الحجم الجديد
+//         boxShadow: [
+//           BoxShadow(
+//             color: primaryBlue.withOpacity(0.25),
+//             blurRadius: 15,
+//             offset: const Offset(0, 8),
+//           ),
+//         ],
+//       ),
+//       child: Row(
+//         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+//         children: [
+//           const Icon(
+//             Icons.star_rounded,
+//             color: Colors.white,
+//             size: 35,
+//           ), // تصغير الأيقونة قليلاً
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.end,
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               Text(
+//                 rank,
+//                 style: TextStyle(
+//                   color: Colors.white.withOpacity(0.7),
+//                   fontSize: 12,
+//                   fontFamily: 'Cairo',
+//                 ),
+//               ),
+//               Text(
+//                 name,
+//                 style: const TextStyle(
+//                   color: Colors.white,
+//                   fontSize: 18, // تصغير الخط ليناسب الحجم الجديد
+//                   fontWeight: FontWeight.bold,
+//                   fontFamily: 'Cairo',
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildTransactionCard(String title, String date, String price) {
+//     return Container(
+//       margin: const EdgeInsets.only(bottom: 15),
+//       padding: const EdgeInsets.all(20),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(25),
+//         border: Border.all(color: Colors.grey.withOpacity(0.1)),
+//       ),
+//       child: Row(
+//         children: [
+//           Text(
+//             price,
+//             style: const TextStyle(
+//               color: Colors.blueAccent,
+//               fontWeight: FontWeight.w900,
+//               fontSize: 20,
+//               fontFamily: 'Cairo',
+//             ),
+//           ),
+//           const Spacer(),
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.end,
+//             children: [
+//               Text(
+//                 title,
+//                 style: const TextStyle(
+//                   fontWeight: FontWeight.bold,
+//                   fontSize: 17,
+//                   fontFamily: 'Cairo',
+//                 ),
+//               ),
+//               Text(
+//                 date,
+//                 style: const TextStyle(
+//                   color: Colors.grey,
+//                   fontSize: 13,
+//                   fontFamily: 'Cairo',
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildLabel(String text) {
+//     return Text(
+//       text,
+//       style: const TextStyle(
+//         fontSize: 22,
+//         fontWeight: FontWeight.w900,
+//         fontFamily: 'Cairo',
+//         color: Color(0xFF1A1A1A),
+//       ),
+//     );
+//   }
+
+//   Widget _buildNotificationBadge() {
+//     return Stack(
+//       children: [
+//         const Icon(
+//           Icons.notifications_none_rounded,
+//           color: Colors.white,
+//           size: 32,
+//         ),
+//         Positioned(
+//           right: 4,
+//           top: 4,
+//           child: Container(
+//             width: 10,
+//             height: 10,
+//             decoration: const BoxDecoration(
+//               color: Colors.redAccent,
+//               shape: BoxShape.circle,
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildBottomNav() {
+//     return Container(
+//       height: 85,
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         boxShadow: [
+//           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 30),
+//         ],
+//       ),
+//       child: BottomNavigationBar(
+//         currentIndex: _selectedIndex,
+//         onTap: (i) => setState(() => _selectedIndex = i),
+//         type: BottomNavigationBarType.fixed,
+//         elevation: 0,
+//         backgroundColor: Colors.transparent,
+//         selectedItemColor: primaryBlue,
+//         unselectedItemColor: const Color(0xFF94A3B8),
+//         selectedLabelStyle: const TextStyle(
+//           fontFamily: 'Cairo',
+//           fontWeight: FontWeight.bold,
+//           fontSize: 12,
+//         ),
+//         items: const [
+//           BottomNavigationBarItem(
+//             icon: Icon(Icons.grid_view_rounded, size: 28),
+//             label: "الرئيسية",
+//           ),
+//           BottomNavigationBarItem(
+//             icon: Icon(Icons.people_outline_rounded, size: 28),
+//             label: "الشركاء",
+//           ),
+//           BottomNavigationBarItem(
+//             icon: Icon(Icons.swap_horiz_rounded, size: 28),
+//             label: "العمليات",
+//           ),
+//           BottomNavigationBarItem(
+//             icon: Icon(Icons.inventory_2_outlined, size: 28),
+//             label: "المستودعات",
+//           ),
+//           BottomNavigationBarItem(
+//             icon: Icon(Icons.wallet_outlined, size: 28),
+//             label: "الشيكات",
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }
+
 import 'package:flutter/material.dart';
 import 'package:tradeflow_app/pages/Operation_screen.dart';
 import 'warehouses_screen.dart';
@@ -13,73 +424,64 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final Color activeBlue = const Color(0xFF3D5EAB);
-  final Color headerBlue = const Color(0xFF3D5DB8);
+  final Color primaryBlue = const Color(0xFF3D5EAB);
+  final Color scaffoldBg = const Color(0xFFF8FAFF);
 
   @override
   Widget build(BuildContext context) {
-    // التعديل هنا لضمان فتح صفحة "العمليات" الأساسية
     final List<Widget> pages = [
-      _buildModernHomeContent(), // Index 0
-      const PartnersScreen(), // Index 1
-      const OperationScreen(), // Index 2 - يتوجه لملف operation_screen.dart
-      const WarehousesScreen(), // Index 3
-      const ChecksScreen(), // Index 4
+      _buildEnhancedHomeContent(),
+      const PartnersScreen(),
+      const OperationScreen(),
+      const WarehousesScreen(),
+      const ChecksScreen(),
     ];
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: scaffoldBg,
       body: IndexedStack(index: _selectedIndex, children: pages),
       bottomNavigationBar: _buildBottomNav(),
     );
   }
 
-  Widget _buildModernHomeContent() {
+  Widget _buildEnhancedHomeContent() {
     return Column(
       children: [
-        // ===== الهيدر (Header) =====
+        // ===== الهيدر =====
         Container(
           width: double.infinity,
+          height: 145,
           decoration: BoxDecoration(
-            color: headerBlue,
+            color: primaryBlue,
             borderRadius: const BorderRadius.only(
-              bottomLeft: Radius.circular(28),
-              bottomRight: Radius.circular(28),
+              bottomLeft: Radius.circular(45),
+              bottomRight: Radius.circular(45),
             ),
           ),
           child: SafeArea(
-            bottom: false,
-            child: SizedBox(
-              height: 100,
-              child: Stack(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Positioned.fill(
-                    child: ClipRRect(
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(28),
-                        bottomRight: Radius.circular(28),
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.menu_rounded,
+                        color: Colors.white,
+                        size: 32,
                       ),
-                      child: CustomPaint(painter: _TopoPainter()),
-                    ),
+                      const SizedBox(width: 15),
+                      _buildNotificationBadge(),
+                    ],
                   ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 22),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        _buildNotificationIcon(),
-                        const Text(
-                          "مرحباً ، حمزة",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Cairo',
-                          ),
-                        ),
-                        const Icon(Icons.menu, color: Colors.white, size: 28),
-                      ],
+                  const Text(
+                    " اهلا العميل  ",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      fontFamily: 'Cairo',
                     ),
                   ),
                 ],
@@ -88,58 +490,93 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
 
-        // ===== المحتوى (المربعات والقوائم) =====
         Expanded(
           child: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
+                const SizedBox(height: 20),
+                // ===== كروت القائمة الرئيسية (تمت إضافة الديون والتقارير) =====
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 10, 14, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     crossAxisCount: 2,
-                    crossAxisSpacing: 10,
-                    mainAxisSpacing: 10,
-                    childAspectRatio: 1.55,
+                    crossAxisSpacing: 15,
+                    mainAxisSpacing: 15,
+                    childAspectRatio: 1.3,
                     children: [
-                      _buildGridCard(
-                        "المستودعات",
-                        Icons.inventory_2_outlined,
-                        3,
-                      ),
-                      _buildGridCard(
+                      _buildMainGridCard(
                         "الشيكات",
+                        "2 شيكات معلقة",
                         Icons.account_balance_wallet_outlined,
                         4,
                       ),
-                      _buildGridCard("العمليات", Icons.swap_horiz_rounded, 2),
-                      _buildGridCard("الشركاء", Icons.people_outline, 1),
+                      _buildMainGridCard(
+                        "المستودعات",
+                        "3 مستودعات نشطة",
+                        Icons.inventory_2_outlined,
+                        3,
+                      ),
+                      _buildMainGridCard(
+                        "الشركاء",
+                        "12 شريك تجاري",
+                        Icons.people_outline_rounded,
+                        1,
+                      ),
+                      _buildMainGridCard(
+                        "العمليات",
+                        "7 عمليات اليوم",
+                        Icons.swap_horiz_rounded,
+                        2,
+                      ),
+                      // الكرت الجديد الأول: الديون
+                      _buildMainGridCard(
+                        "الديون",
+                        "متابعة المبالغ",
+                        Icons.monetization_on_outlined,
+                        0,
+                      ),
+                      // الكرت الجديد الثاني: التقارير
+                      _buildMainGridCard(
+                        "التقارير",
+                        "إحصائيات عامة",
+                        Icons.bar_chart_rounded,
+                        0,
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+
+                const SizedBox(height: 30),
+
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      _buildSectionTitle("الأكثر مبيعاً"),
-                      const SizedBox(height: 8),
-                      _buildActionStrip("خشب ديكور خارجي"),
-                      const SizedBox(height: 22),
-                      _buildSectionTitle("آخر المبيعات"),
-                      const SizedBox(height: 8),
-                      _buildSaleCard("خشب زان أفريقي", "2026-03-20", "1,200 +"),
-                      const SizedBox(height: 10),
-                      _buildSaleCard(
+                      _buildLabel("الأكثر مبيعاً"),
+                      const SizedBox(height: 15),
+
+                      _buildFeaturedCard("خشب ديكور خارجي", "المنتج الأول"),
+
+                      const SizedBox(height: 35),
+
+                      _buildLabel("آخر المبيعات"),
+                      const SizedBox(height: 15),
+                      _buildTransactionCard(
+                        "خشب زان أفريقي",
+                        "2026-03-20",
+                        "₪ 1,200 +",
+                      ),
+                      _buildTransactionCard(
                         "بيع 20 لوح خشب سويد",
                         "2026-03-20",
-                        "2,000 +",
+                        "₪ 2,000 +",
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 50),
                     ],
                   ),
                 ),
@@ -151,74 +588,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  // --- دوال بناء الواجهة المساعدة ---
-
-  Widget _buildNotificationIcon() {
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Icon(Icons.notifications_outlined, color: Colors.white, size: 28),
-        Positioned(
-          top: -2,
-          right: -2,
-          child: Container(
-            width: 9,
-            height: 9,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: const TextStyle(
-        color: Color(0xFF3D5EAB),
-        fontWeight: FontWeight.bold,
-        fontSize: 17,
-        fontFamily: 'Cairo',
-      ),
-    );
-  }
-
-  Widget _buildGridCard(String title, IconData icon, int index) {
+  // الكرت الرئيسي (نفس تصميمك الأصلي)
+  Widget _buildMainGridCard(
+    String title,
+    String sub,
+    IconData icon,
+    int index,
+  ) {
     return InkWell(
       onTap: () => setState(() => _selectedIndex = index),
-      borderRadius: BorderRadius.circular(16),
       child: Container(
         decoration: BoxDecoration(
-          color: activeBlue,
-          borderRadius: BorderRadius.circular(16),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.end,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Expanded(
-              child: Text(
-                title,
-                textAlign: TextAlign.right,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  fontFamily: 'Cairo',
-                ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: primaryBlue.withOpacity(0.08),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: primaryBlue, size: 30),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 18,
+                fontFamily: 'Cairo',
+                color: Color(0xFF2D3243),
               ),
             ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+            Text(
+              sub,
+              style: TextStyle(
+                color: Colors.grey[500],
+                fontSize: 13,
+                fontFamily: 'Cairo',
               ),
-              child: Icon(icon, color: activeBlue, size: 24),
             ),
           ],
         ),
@@ -226,42 +644,70 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActionStrip(String title) {
+  Widget _buildFeaturedCard(String name, String rank) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
       decoration: BoxDecoration(
-        color: activeBlue,
-        borderRadius: BorderRadius.circular(14),
+        color: primaryBlue,
+        borderRadius: BorderRadius.circular(25),
+        boxShadow: [
+          BoxShadow(
+            color: primaryBlue.withOpacity(0.25),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
-      child: Text(
-        title,
-        textAlign: TextAlign.right,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 17,
-          fontFamily: 'Cairo',
-        ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Icon(Icons.star_rounded, color: Colors.white, size: 35),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                rank,
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 12,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+              Text(
+                name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Cairo',
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildSaleCard(String title, String date, String price) {
+  Widget _buildTransactionCard(String title, String date, String price) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.only(bottom: 15),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: activeBlue,
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
       ),
       child: Row(
         children: [
           Text(
             price,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+              color: Colors.blueAccent,
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
               fontFamily: 'Cairo',
             ),
           ),
@@ -272,121 +718,107 @@ class _HomeScreenState extends State<HomeScreen> {
               Text(
                 title,
                 style: const TextStyle(
-                  color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 15,
+                  fontSize: 17,
                   fontFamily: 'Cairo',
                 ),
               ),
-              const SizedBox(height: 3),
               Text(
                 date,
                 style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
+                  color: Colors.grey,
+                  fontSize: 13,
                   fontFamily: 'Cairo',
                 ),
               ),
             ],
-          ),
-          const SizedBox(width: 12),
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.trending_up, color: activeBlue, size: 20),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBottomNav() {
-    return BottomNavigationBar(
-      currentIndex: _selectedIndex,
-      onTap: (i) => setState(() => _selectedIndex = i),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: Colors.white,
-      selectedItemColor: const Color(0xFF3D5EAB),
-      unselectedItemColor: Colors.black45,
-      selectedLabelStyle: const TextStyle(
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w900,
         fontFamily: 'Cairo',
-        fontWeight: FontWeight.bold,
-        fontSize: 11,
+        color: Color(0xFF1A1A1A),
       ),
-      unselectedLabelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 11),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.grid_view_rounded),
-          label: "الرئيسية",
+    );
+  }
+
+  Widget _buildNotificationBadge() {
+    return Stack(
+      children: [
+        const Icon(
+          Icons.notifications_none_rounded,
+          color: Colors.white,
+          size: 32,
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.people_outline),
-          label: "الشركاء",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.swap_horiz_rounded),
-          label: "العمليات",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.inventory_2_outlined),
-          label: "المستودعات",
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.account_balance_wallet_outlined),
-          label: "الشيكات",
+        Positioned(
+          right: 4,
+          top: 4,
+          child: Container(
+            width: 10,
+            height: 10,
+            decoration: const BoxDecoration(
+              color: Colors.redAccent,
+              shape: BoxShape.circle,
+            ),
+          ),
         ),
       ],
     );
   }
-}
 
-class Operation {
-  const Operation();
-}
-
-// الرسام الخاص بالهيدر
-class _TopoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withOpacity(0.13)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.3;
-
-    final List<List<double>> curves = [
-      [0.0, 0.25, 0.15, 0.05, 0.4, 0.35, 0.65, 0.15, 0.85, 0.28, 1.0, 0.18],
-      [0.0, 0.42, 0.2, 0.22, 0.45, 0.52, 0.7, 0.32, 0.88, 0.45, 1.0, 0.35],
-      [0.0, 0.58, 0.25, 0.38, 0.5, 0.68, 0.72, 0.48, 0.9, 0.6, 1.0, 0.52],
-      [0.0, 0.72, 0.3, 0.55, 0.55, 0.82, 0.75, 0.62, 0.92, 0.75, 1.0, 0.68],
-      [0.0, 0.88, 0.35, 0.70, 0.6, 0.95, 0.78, 0.78, 0.94, 0.88, 1.0, 0.85],
-    ];
-
-    for (final c in curves) {
-      final path = Path();
-      path.moveTo(c[0] * size.width, c[1] * size.height);
-      path.cubicTo(
-        c[2] * size.width,
-        c[3] * size.height,
-        c[4] * size.width,
-        c[5] * size.height,
-        c[6] * size.width,
-        c[7] * size.height,
-      );
-      path.cubicTo(
-        c[8] * size.width,
-        c[9] * size.height,
-        c[10] * size.width,
-        c[11] * size.height,
-        size.width,
-        c[11] * size.height,
-      );
-      canvas.drawPath(path, paint);
-    }
+  Widget _buildBottomNav() {
+    return Container(
+      height: 85,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 30),
+        ],
+      ),
+      child: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (i) => setState(() => _selectedIndex = i),
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        selectedItemColor: primaryBlue,
+        unselectedItemColor: const Color(0xFF94A3B8),
+        selectedLabelStyle: const TextStyle(
+          fontFamily: 'Cairo',
+          fontWeight: FontWeight.bold,
+          fontSize: 12,
+        ),
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.grid_view_rounded, size: 28),
+            label: "الرئيسية",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.people_outline_rounded, size: 28),
+            label: "الشركاء",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.swap_horiz_rounded, size: 28),
+            label: "العمليات",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.inventory_2_outlined, size: 28),
+            label: "المستودعات",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.wallet_outlined, size: 28),
+            label: "الشيكات",
+          ),
+        ],
+      ),
+    );
   }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

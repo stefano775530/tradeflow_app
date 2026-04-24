@@ -162,15 +162,44 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     );
   }
 
+  // Future<void> _fetchProducts() async {
+  //   setState(() => _isLoading = true);
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final token = prefs.getString("token");
+
+  //   try {
+  //     final response = await http.get(
+  //       Uri.parse(
+  //         "${ApiEndpoints.getWarehouses}/${widget.warehouse.id}/storage",
+  //       ),
+  //       headers: {
+  //         "Authorization": "Bearer $token",
+  //         "Accept": "application/json",
+  //       },
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       final List<dynamic> data = jsonDecode(response.body);
+  //       setState(() {
+  //         products = data.map((item) => Product.fromJson(item)).toList();
+  //       });
+  //     }
+  //   } catch (e) {
+  //     debugPrint("Error fetching products: $e");
+  //   } finally {
+  //     setState(() => _isLoading = false);
+  //   }
+  // }
   Future<void> _fetchProducts() async {
     setState(() => _isLoading = true);
+
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("token");
 
     try {
       final response = await http.get(
         Uri.parse(
-          "https://roger-unimplored-luella.ngrok-free.dev/api/warehouse/${widget.warehouse.id}/storage",
+          "${ApiEndpoints.getWarehouses}/${widget.warehouse.id}/storage",
         ),
         headers: {
           "Authorization": "Bearer $token",
@@ -179,10 +208,29 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+
+        List<dynamic> data = [];
+
+        // ✅ إذا List مباشرة
+        if (decoded is List) {
+          data = decoded;
+        }
+        // ✅ إذا داخل data
+        else if (decoded is Map && decoded['data'] is List) {
+          data = decoded['data'];
+        }
+        // ✅ إذا داخل products
+        else if (decoded is Map && decoded['products'] is List) {
+          data = decoded['products'];
+        }
+
         setState(() {
           products = data.map((item) => Product.fromJson(item)).toList();
         });
+      } else {
+        debugPrint("Status Code: ${response.statusCode}");
+        debugPrint("Body: ${response.body}");
       }
     } catch (e) {
       debugPrint("Error fetching products: $e");
