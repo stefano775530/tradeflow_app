@@ -20,14 +20,19 @@ module.exports = {
         type: Sequelize.STRING,
         allowNull: false,
       },
+      company_name: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
       check_number: {
         type: Sequelize.STRING,
         allowNull: false,
         unique: true,
       },
       amount: {
-        type: Sequelize.FLOAT,
+        type: Sequelize.DECIMAL(12, 2),
         allowNull: false,
+        defaultValue: 0,
       },
       issue_date: {
         type: Sequelize.DATEONLY,
@@ -42,21 +47,23 @@ module.exports = {
         defaultValue: "pending",
       },
       type: {
-        type: Sequelize.ENUM("incoming", "outgoing"),
+        type: Sequelize.ENUM("وارد", "صادر"),
         allowNull: false,
-        defaultValue: "incoming",
+        defaultValue: "وارد",
       },
-      company_name: {
-        allowNull: false,
-        type: Sequelize.STRING,
-      },
-      createdAt: {
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW,
       },
-      updatedAt: {
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
+        defaultValue: Sequelize.NOW,
+      },
+      note: {
+        type: Sequelize.TEXT,
+        allowNull: true,
       },
     });
   },

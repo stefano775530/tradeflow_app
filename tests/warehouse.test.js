@@ -53,12 +53,88 @@ describe("Warehouses API", () => {
       .send({ name: "B Warehouse", location: "B City" });
 
     const res = await request(app)
-      .get("/api/warehouse")
+      .get("/api/warehouse?page=1&limit=10")
       .set("Authorization", `Bearer ${tokenA}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.length).toBe(1);
-    expect(res.body[0].name).toBe("A Warehouse");
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(10);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.totalPages).toBe(1);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].name).toBe("A Warehouse");
+  });
+
+  test("get warehouses respects limit and page", async () => {
+    const { token } = await createUserAndLogin({
+      email: "warehousepage@test.com",
+      phone_number: "+14155550172",
+    });
+
+    for (let i = 1; i <= 5; i++) {
+      await request(app)
+        .post("/api/warehouse")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          name: `Warehouse ${i}`,
+          location: `Location ${i}`,
+        });
+    }
+
+    const res = await request(app)
+      .get("/api/warehouse?page=2&limit=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.page).toBe(2);
+    expect(res.body.limit).toBe(2);
+    expect(res.body.totalItems).toBe(5);
+    expect(res.body.totalPages).toBe(3);
+    expect(res.body.hasNextPage).toBe(true);
+    expect(res.body.hasPrevPage).toBe(true);
+    expect(res.body.data.length).toBe(2);
+  });
+
+  test("get warehouses sorts by name ascending", async () => {
+    const { token } = await createUserAndLogin({
+      email: "warehousesort@test.com",
+      phone_number: "+14155550173",
+    });
+
+    await request(app)
+      .post("/api/warehouse")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Z Warehouse",
+        location: "Z City",
+      });
+
+    await request(app)
+      .post("/api/warehouse")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "A Warehouse",
+        location: "A City",
+      });
+
+    await request(app)
+      .post("/api/warehouse")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "M Warehouse",
+        location: "M City",
+      });
+
+    const res = await request(app)
+      .get("/api/warehouse?sortBy=name&sortOrder=asc")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.length).toBe(3);
+    expect(res.body.data[0].name).toBe("A Warehouse");
+    expect(res.body.data[1].name).toBe("M Warehouse");
+    expect(res.body.data[2].name).toBe("Z Warehouse");
   });
 
   test("update warehouse succeeds", async () => {

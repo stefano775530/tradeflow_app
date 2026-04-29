@@ -29,6 +29,10 @@ module.exports = {
         allowNull: false,
         defaultValue: 10,
       },
+      thickness: {
+        type: Sequelize.FLOAT,
+        allowNull: false,
+      },
       purchase_price: {
         type: Sequelize.FLOAT,
         allowNull: false,
@@ -45,10 +49,6 @@ module.exports = {
       created_at: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW,
-      },
-      thickness: {
-        type: Sequelize.FLOAT,
-        allowNull: false,
       },
     });
   },

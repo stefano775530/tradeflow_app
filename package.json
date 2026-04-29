@@ -4,9 +4,11 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start": "cross-env NODE_ENV=development SHOW_RESET_LINK_IN_LOGS=false node server.js",
+    "start:prod": "cross-env NODE_ENV=production SHOW_RESET_LINK_IN_LOGS=false node server.js",
+    "dev": "cross-env NODE_ENV=development SHOW_RESET_LINK_IN_LOGS=true nodemon server.js",
     "test": "jest --runInBand",
+    "test:ci": "jest --runInBand --verbose --detectOpenHandles",
     "test:db:create": "npx sequelize-cli db:create --env test",
     "test:db:migrate": "npx sequelize-cli db:migrate --env test",
     "test:db:reset": "npx sequelize-cli db:migrate:undo:all --env test && npx sequelize-cli db:migrate --env test"
@@ -23,6 +25,7 @@
     "express-rate-limit": "^8.3.2",
     "express-validator": "^7.3.1",
     "fastest-validator": "^1.19.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.20.0",
     "sequelize": "^6.37.8",
@@ -30,6 +33,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "cross-env": "^10.1.0",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
     "sequelize-cli": "^6.6.5",

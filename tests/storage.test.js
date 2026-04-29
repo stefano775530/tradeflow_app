@@ -34,20 +34,21 @@ describe("Storage API", () => {
       .post(`/api/warehouse/${warehouse.id}/storage`)
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "Rice",
+        name: "wood",
         quantity: 100,
         minimum_quantity: 10,
         purchase_price: 5,
         sale_price: 8,
         expiration_date: "2026-12-31",
+        thickness: 6,
       });
 
     expect(res.statusCode).toBe(201);
-    expect(res.body.storage.name).toBe("Rice");
+    expect(res.body.storage.name).toBe("wood");
     expect(res.body.storage.warehouse_id).toBe(`${warehouse.id}`);
   });
 
-  test("get all storage for a warehouse succeeds", async () => {
+  test("get all storage for a warehouse returns paginated structure", async () => {
     const { token } = await createUserAndLogin({
       email: "storage2@test.com",
       phone_number: "+14155550132",
@@ -59,20 +60,121 @@ describe("Storage API", () => {
       .post(`/api/warehouse/${warehouse.id}/storage`)
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "Sugar",
+        name: "wood suger",
         quantity: 50,
         minimum_quantity: 5,
         purchase_price: 3,
         sale_price: 6,
+        thickness: 6,
       });
 
     const res = await request(app)
-      .get(`/api/warehouse/${warehouse.id}/storage`)
+      .get(`/api/warehouse/${warehouse.id}/storage?page=1&limit=10`)
       .set("Authorization", `Bearer ${token}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.length).toBe(1);
-    expect(res.body[0].name).toBe("Sugar");
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(10);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.totalPages).toBe(1);
+    expect(res.body.hasNextPage).toBe(false);
+    expect(res.body.hasPrevPage).toBe(false);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].name).toBe("wood suger");
+  });
+
+  test("get storage by warehouse sorts by quantity ascending", async () => {
+    const { token } = await createUserAndLogin({
+      email: "storagesort@test.com",
+      phone_number: "+14155550171",
+    });
+
+    const warehouse = await createWarehouse(token);
+
+    await request(app)
+      .post(`/api/warehouse/${warehouse.id}/storage`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "High",
+        quantity: 30,
+        minimum_quantity: 5,
+        purchase_price: 2,
+        sale_price: 4,
+        thickness: 6,
+      });
+
+    await request(app)
+      .post(`/api/warehouse/${warehouse.id}/storage`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Low",
+        quantity: 10,
+        minimum_quantity: 5,
+        purchase_price: 2,
+        sale_price: 4,
+        thickness: 6,
+      });
+
+    await request(app)
+      .post(`/api/warehouse/${warehouse.id}/storage`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        name: "Mid",
+        quantity: 20,
+        minimum_quantity: 5,
+        purchase_price: 2,
+        sale_price: 4,
+        thickness: 6,
+      });
+
+    const res = await request(app)
+      .get(
+        `/api/warehouse/${warehouse.id}/storage?sortBy=quantity&sortOrder=asc`,
+      )
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.length).toBe(3);
+    expect(res.body.data[0].quantity).toBe(10);
+    expect(res.body.data[1].quantity).toBe(20);
+    expect(res.body.data[2].quantity).toBe(30);
+  });
+
+  test("get storage by warehouse respects limit and page", async () => {
+    const { token } = await createUserAndLogin({
+      email: "storagepage@test.com",
+      phone_number: "+14155550170",
+    });
+
+    const warehouse = await createWarehouse(token);
+
+    for (let i = 1; i <= 5; i++) {
+      await request(app)
+        .post(`/api/warehouse/${warehouse.id}/storage`)
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          name: `Item ${i}`,
+          quantity: i * 10,
+          minimum_quantity: 5,
+          purchase_price: 2,
+          sale_price: 4,
+          thickness: 6,
+        });
+    }
+
+    const res = await request(app)
+      .get(`/api/warehouse/${warehouse.id}/storage?page=2&limit=2`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.page).toBe(2);
+    expect(res.body.limit).toBe(2);
+    expect(res.body.totalItems).toBe(5);
+    expect(res.body.totalPages).toBe(3);
+    expect(res.body.hasNextPage).toBe(true);
+    expect(res.body.hasPrevPage).toBe(true);
+    expect(res.body.data.length).toBe(2);
   });
 
   test("get one storage item succeeds", async () => {
@@ -87,11 +189,12 @@ describe("Storage API", () => {
       .post(`/api/warehouse/${warehouse.id}/storage`)
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "Tea",
+        name: "wood tea",
         quantity: 20,
         minimum_quantity: 3,
         purchase_price: 2,
         sale_price: 4,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;
@@ -102,7 +205,7 @@ describe("Storage API", () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.id).toBe(storageId);
-    expect(res.body.name).toBe("Tea");
+    expect(res.body.name).toBe("wood tea");
   });
 
   test("update storage succeeds", async () => {
@@ -117,11 +220,12 @@ describe("Storage API", () => {
       .post(`/api/warehouse/${warehouse.id}/storage`)
       .set("Authorization", `Bearer ${token}`)
       .send({
-        name: "Coffee",
+        name: "wood coffee",
         quantity: 40,
         minimum_quantity: 5,
         purchase_price: 7,
         sale_price: 10,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;
@@ -160,6 +264,7 @@ describe("Storage API", () => {
         minimum_quantity: 2,
         purchase_price: 4,
         sale_price: 6,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;
@@ -202,6 +307,7 @@ describe("Storage API", () => {
         quantity: 10,
         purchase_price: 1,
         sale_price: 2,
+        thickness: 6,
       });
 
     expect(res.statusCode).toBe(404);
@@ -228,6 +334,7 @@ describe("Storage API", () => {
         quantity: 11,
         purchase_price: 2,
         sale_price: 3,
+        thickness: 6,
       });
 
     const res = await request(app)
@@ -258,6 +365,7 @@ describe("Storage API", () => {
         quantity: 12,
         purchase_price: 2,
         sale_price: 4,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;
@@ -290,6 +398,7 @@ describe("Storage API", () => {
         quantity: 20,
         purchase_price: 5,
         sale_price: 7,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;
@@ -325,6 +434,7 @@ describe("Storage API", () => {
         quantity: 9,
         purchase_price: 2,
         sale_price: 5,
+        thickness: 6,
       });
 
     const storageId = createRes.body.storage.id;

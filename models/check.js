@@ -12,6 +12,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         onDelete: "CASCADE",
       });
+      Check.hasOne(models.Payment, {
+        foreignKey: "check_id",
+        onDelete: "RESTRICT",
+      });
     }
   }
   Check.init(
@@ -24,14 +28,19 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      company_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       check_number: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
       },
       amount: {
-        type: DataTypes.FLOAT,
+        type: DataTypes.DECIMAL(12, 2),
         allowNull: false,
+        defaultValue: 0,
       },
       issue_date: {
         type: DataTypes.DATEONLY,
@@ -43,23 +52,34 @@ module.exports = (sequelize, DataTypes) => {
       },
       status: {
         type: DataTypes.ENUM("pending", "cashed", "bounced"),
+        allowNull: false,
         defaultValue: "pending",
       },
       type: {
-        type: DataTypes.ENUM("incoming", "outgoing"),
+        type: DataTypes.ENUM("وارد", "صادر"),
         allowNull: false,
-        defaultValue: "incoming",
+        defaultValue: "وارد",
       },
-      company_name: {
+      created_at: {
+        type: DataTypes.DATE,
         allowNull: false,
-        type: DataTypes.STRING,
+        defaultValue: DataTypes.NOW,
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      note: {
+        type: DataTypes.TEXT,
+        allowNull: true,
       },
     },
     {
       sequelize,
       modelName: "Check",
       tableName: "Checks",
-      timestamps: true,
+      timestamps: false,
     },
   );
   return Check;

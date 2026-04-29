@@ -12,6 +12,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "warehouse_id",
         onDelete: "CASCADE",
       });
+
+      Storage.hasMany(models.SaleItemAllocation, {
+        foreignKey: "storage_id",
+        onDelete: "CASCADE",
+      });
+
+      Storage.hasMany(models.PurchaseItemAllocation, {
+        foreignKey: "storage_id",
+        onDelete: "CASCADE",
+      });
     }
   }
   Storage.init(
@@ -25,11 +35,6 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-
-      thickness: {
-        type: DataTypes.FLOAT,
-        allowNull: true,
-      },
       quantity: {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -39,6 +44,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 10,
+      },
+      thickness: {
+        type: DataTypes.STRING,
+        allowNull: false,
       },
       purchase_price: {
         type: DataTypes.FLOAT,

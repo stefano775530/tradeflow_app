@@ -12,7 +12,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "user_id",
         onDelete: "CASCADE",
       });
-      // define association here
+
+      Partner.hasMany(models.Sale, {
+        foreignKey: "partner_id",
+        onDelete: "SET NULL",
+      });
+
+      Partner.hasMany(models.Purchase, {
+        foreignKey: "partner_id",
+        onDelete: "SET NULL",
+      });
     }
   }
   Partner.init(
@@ -33,11 +42,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      createdAt: {
-        type: DataTypes.DATE,
-        defaultValue: DataTypes.NOW,
-      },
-      updatedAt: {
+      created_at: {
         type: DataTypes.DATE,
         defaultValue: DataTypes.NOW,
       },
@@ -46,6 +51,7 @@ module.exports = (sequelize, DataTypes) => {
       sequelize,
       modelName: "Partner",
       tableName: "Partners",
+      timestamps: false,
     },
   );
   return Partner;

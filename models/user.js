@@ -15,6 +15,21 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.PasswordReset, { foreignKey: "user_id" });
 
       User.hasMany(models.Transaction, { foreignKey: "user_id" });
+
+      User.hasMany(models.Sale, {
+        foreignKey: "user_id",
+        onDelete: "CASCADE",
+      });
+
+      User.hasMany(models.Purchase, {
+        foreignKey: "user_id",
+        onDelete: "CASCADE",
+      });
+
+      User.hasMany(models.Payment, {
+        foreignKey: "user_id",
+        onDelete: "CASCADE",
+      });
     }
   }
   User.init(

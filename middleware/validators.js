@@ -98,7 +98,11 @@ const createStorageValidation = validate([
     .optional()
     .isInt({ min: 0 })
     .withMessage("Minimum quantity must be a non-negative integer"),
-
+  body("thickness")
+    .notEmpty()
+    .withMessage("thickness is required")
+    .isInt({ min: 0 })
+    .withMessage("thickness must be a non-negative integer"),
   body("purchase_price")
     .notEmpty()
     .withMessage("Purchase price is required")
@@ -132,6 +136,11 @@ const updateStorageValidation = validate([
     .optional()
     .isInt({ min: 0 })
     .withMessage("Minimum quantity must be a non-negative integer"),
+
+  body("thickness")
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage("thickness must be a non-negative integer"),
 
   body("purchase_price")
     .optional()
@@ -208,6 +217,8 @@ const createCheckValidation = validate([
     .isLength({ min: 3 })
     .withMessage("Check number must be valid"),
 
+  body("company_name").notEmpty().withMessage("Company name is required"),
+
   body("amount")
     .notEmpty()
     .withMessage("Amount is required")
@@ -219,7 +230,7 @@ const createCheckValidation = validate([
     .withMessage("Issue date is required")
     .isDate()
     .withMessage("Issue date must be valid"),
-  body("company_name").notEmpty().withMessage("Company name is required"),
+
   body("cashing_date")
     .optional()
     .isDate()
@@ -234,7 +245,7 @@ const createCheckValidation = validate([
   body("type")
     .notEmpty()
     .withMessage("Type is required")
-    .isIn(["incoming", "outgoing"])
+    .isIn(["وارد", "صادر"])
     .withMessage("Type must be incoming or outgoing"),
 
   body("status")
@@ -247,15 +258,15 @@ const createCheckValidation = validate([
         throw new Error("Cashing date is required when status is cashed");
       }
 
-      if (value === "pending" && cashingDate) {
-        throw new Error("Pending check cannot have a cashing date");
-      }
+      //if (value === "pending" && cashingDate) {
+      //  throw new Error("Pending check cannot have a cashing date");
+      //}
 
       return true;
     }),
 
   body().custom((_, { req }) => {
-    const { status, cashing_date, company_name } = req.body;
+    const { status, cashing_date } = req.body;
 
     if (!status) {
       return true;
@@ -265,12 +276,10 @@ const createCheckValidation = validate([
       throw new Error("Cashing date is required when status is cashed");
     }
 
-    if (status === "pending" && cashing_date) {
-      throw new Error("Pending check cannot have a cashing date");
-    }
-    if (!company_name) {
-      throw new Error("لازم تدخل اسم شركة ");
-    }
+    //if (status === "pending" && cashing_date) {
+    // throw new Error("Pending check cannot have a cashing date");
+    //}
+
     return true;
   }),
 ]);
@@ -286,6 +295,8 @@ const updateCheckValidation = validate([
     .isLength({ min: 3 })
     .withMessage("Check number must be valid"),
 
+  body("company_name").optional(),
+
   body("amount")
     .optional()
     .isFloat({ gt: 0 })
@@ -295,8 +306,6 @@ const updateCheckValidation = validate([
     .optional()
     .isDate()
     .withMessage("Issue date must be valid"),
-
-  //body("company_name").optional().withMessage("Company name is required"),
 
   body("cashing_date")
     .optional({ nullable: true })
@@ -321,7 +330,7 @@ const updateCheckValidation = validate([
 
   body("type")
     .optional()
-    .isIn(["incoming", "outgoing"])
+    .isIn(["وارد", "صادر"])
     .withMessage("Type must be incoming or outgoing"),
 
   body("status")
@@ -330,23 +339,15 @@ const updateCheckValidation = validate([
     .withMessage("Invalid status value"),
 
   body().custom((_, { req }) => {
-    const { status, cashing_date, company_name } = req.body;
+    const { status, cashing_date } = req.body;
 
     if (status === "cashed" && !cashing_date) {
       throw new Error("Cashing date is required when status is cashed");
     }
 
-    if (status === "pending" && cashing_date && cashing_date !== null) {
-      throw new Error("Pending check cannot have a cashing date");
-    }
-    if (company_name === undefined) {
-      return true;
-    }
-
-    // ❌ ولا واحد
-    if (!company_name) {
-      throw new Error("لازم يكون في اسم شركة أو اسم عميل");
-    }
+    //if (status === "pending" && cashing_date && cashing_date !== null) {
+    //  throw new Error("Pending check cannot have a cashing date");
+    //}
 
     return true;
   }),

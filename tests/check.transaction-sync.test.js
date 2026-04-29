@@ -26,6 +26,7 @@ describe("Checks linked transaction sync", () => {
         cashing_date: "2026-04-03",
         status: "cashed",
         type: "outgoing",
+        company_name: "abo ali",
       });
 
     expect(res.statusCode).toBe(201);
@@ -60,6 +61,7 @@ describe("Checks linked transaction sync", () => {
         cashing_date: "2026-04-03",
         status: "cashed",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     const checkId = createRes.body.check.id;

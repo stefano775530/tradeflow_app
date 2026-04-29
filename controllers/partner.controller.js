@@ -1,115 +1,52 @@
-const models = require("../models");
+const partnerService = require("../services/partner.service");
 
 async function createPartner(req, res) {
-  try {
-    const { company_name, partner_type, phone_number } = req.body;
+  const partner = await partnerService.createPartnerForUser(
+    req.userData.userId,
+    req.body,
+  );
 
-    if (!company_name || !partner_type || !phone_number) {
-      return res.status(400).json({ message: "جميع الحقول مطلوبة" });
-    }
-
-    const partner = await models.Partner.create({
-      company_name,
-      partner_type,
-      phone_number,
-      user_id: req.userData.userId,
-    });
-
-    res.status(201).json({
-      message: "Partner created successfully",
-      partner,
-    });
-  } catch (err) {
-    console.error(err);
-    res
-      .status(500)
-      .json({ message: "Something went wrong", error: err.message });
-  }
+  res.status(201).json({
+    message: "Partner created successfully",
+    partner,
+  });
 }
 
 async function getPartners(req, res) {
-  try {
-    const partners = await models.Partner.findAll({
-      where: { user_id: req.userData.userId },
-      order: [["createdAt", "DESC"]],
-    });
+  const result = await partnerService.getPartnersForUser(
+    req.userData.userId,
+    req.query,
+  );
 
-    res.status(200).json(partners);
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json(result);
 }
 
 async function getPartner(req, res) {
-  try {
-    const { id } = req.params;
+  const partner = await partnerService.findOwnedPartnerOrThrow(
+    req.userData.userId,
+    req.params.id,
+  );
 
-    const partner = await models.Partner.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!partner) {
-      return res.status(404).json({ message: "Partner not found" });
-    }
-
-    res.status(200).json(partner);
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json(partner);
 }
 
 async function updatePartner(req, res) {
-  try {
-    const { id } = req.params;
-    const { company_name, partner_type, phone_number } = req.body;
+  const partner = await partnerService.updatePartnerForUser(
+    req.userData.userId,
+    req.params.id,
+    req.body,
+  );
 
-    const partner = await models.Partner.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!partner) {
-      return res.status(404).json({ message: "Partner not found" });
-    }
-
-    partner.company_name = company_name || partner.company_name;
-    partner.partner_type = partner_type || partner.partner_type;
-    partner.phone_number = phone_number || partner.phone_number;
-
-    await partner.save();
-
-    res.status(200).json({ message: "Updated successfully", partner });
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json({
+    message: "Updated successfully",
+    partner,
+  });
 }
 
 async function deletePartner(req, res) {
-  try {
-    const { id } = req.params;
+  await partnerService.deletePartnerForUser(req.userData.userId, req.params.id);
 
-    const partner = await models.Partner.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!partner) {
-      return res.status(404).json({ message: "Partner not found" });
-    }
-
-    await partner.destroy();
-
-    res.status(200).json({ message: "Partner deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json({ message: "Partner deleted" });
 }
 
 module.exports = {

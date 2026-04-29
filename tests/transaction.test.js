@@ -24,6 +24,7 @@ describe("Transactions API", () => {
         amount: 150,
         description: "Sale income",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     expect(res.statusCode).toBe(201);
@@ -51,6 +52,7 @@ describe("Transactions API", () => {
         amount: 100,
         description: "A transaction",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     await request(app)
@@ -62,6 +64,7 @@ describe("Transactions API", () => {
         amount: 80,
         description: "B transaction",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const res = await request(app)
@@ -69,8 +72,145 @@ describe("Transactions API", () => {
       .set("Authorization", `Bearer ${tokenA}`);
 
     expect(res.statusCode).toBe(200);
-    expect(res.body.length).toBe(1);
-    expect(res.body[0].description).toBe("A transaction");
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(10);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.totalPages).toBe(1);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(1);
+    expect(res.body.data[0].description).toBe("A transaction");
+  });
+
+  test("get transactions returns paginated structure", async () => {
+    const { token } = await createUserAndLogin({
+      email: "txlist1@test.com",
+      phone_number: "+14155550160",
+    });
+
+    await request(app)
+      .post("/api/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "income",
+        category: "sale",
+        amount: 100,
+        description: "Transaction 1",
+        transaction_date: "2026-04-05",
+        company_name: "abo ali",
+      });
+
+    await request(app)
+      .post("/api/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "expense",
+        category: "rent",
+        amount: 80,
+        description: "Transaction 2",
+        transaction_date: "2026-04-06",
+        company_name: "abo ali",
+      });
+
+    const res = await request(app)
+      .get("/api/transactions?page=1&limit=10")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(10);
+    expect(res.body.totalItems).toBe(2);
+    expect(res.body.totalPages).toBe(1);
+    expect(res.body.hasNextPage).toBe(false);
+    expect(res.body.hasPrevPage).toBe(false);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data.length).toBe(2);
+  });
+
+  test("get transactions respects limit and page", async () => {
+    const { token } = await createUserAndLogin({
+      email: "txlist2@test.com",
+      phone_number: "+14155550161",
+    });
+
+    for (let i = 1; i <= 5; i++) {
+      await request(app)
+        .post("/api/transactions")
+        .set("Authorization", `Bearer ${token}`)
+        .send({
+          type: "income",
+          category: "sale",
+          amount: i * 10,
+          description: `Transaction ${i}`,
+          transaction_date: `2026-04-0${i}`,
+          company_name: "abo ali",
+        });
+    }
+
+    const res = await request(app)
+      .get("/api/transactions?page=2&limit=2")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.page).toBe(2);
+    expect(res.body.limit).toBe(2);
+    expect(res.body.totalItems).toBe(5);
+    expect(res.body.totalPages).toBe(3);
+    expect(res.body.hasNextPage).toBe(true);
+    expect(res.body.hasPrevPage).toBe(true);
+    expect(res.body.data.length).toBe(2);
+  });
+
+  test("get transactions sorts by amount ascending", async () => {
+    const { token } = await createUserAndLogin({
+      email: "txsort@test.com",
+      phone_number: "+14155550162",
+    });
+
+    await request(app)
+      .post("/api/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "income",
+        category: "sale",
+        amount: 300,
+        description: "High",
+        transaction_date: "2026-04-05",
+        company_name: "abo ali",
+      });
+
+    await request(app)
+      .post("/api/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "income",
+        category: "sale",
+        amount: 100,
+        description: "Low",
+        transaction_date: "2026-04-06",
+        company_name: "abo ali",
+      });
+
+    await request(app)
+      .post("/api/transactions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        type: "income",
+        category: "sale",
+        amount: 200,
+        description: "Mid",
+        transaction_date: "2026-04-07",
+        company_name: "abo ali",
+      });
+
+    const res = await request(app)
+      .get("/api/transactions?sortBy=amount&sortOrder=asc")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.data.length).toBe(3);
+    expect(Number(res.body.data[0].amount)).toBe(100);
+    expect(Number(res.body.data[1].amount)).toBe(200);
+    expect(Number(res.body.data[2].amount)).toBe(300);
   });
 
   test("get one transaction succeeds", async () => {
@@ -88,6 +228,7 @@ describe("Transactions API", () => {
         amount: 75,
         description: "Monthly rent",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;
@@ -116,6 +257,7 @@ describe("Transactions API", () => {
         amount: 100,
         description: "Before update",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;
@@ -152,6 +294,7 @@ describe("Transactions API", () => {
         amount: 75,
         description: "Delete me",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;
@@ -191,6 +334,7 @@ describe("Transactions API", () => {
         amount: 111,
         description: "Private tx",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;
@@ -222,6 +366,7 @@ describe("Transactions API", () => {
         amount: 222,
         description: "Locked tx",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;
@@ -256,6 +401,7 @@ describe("Transactions API", () => {
         amount: 333,
         description: "Protected tx",
         transaction_date: "2026-04-05",
+        company_name: "abo ali",
       });
 
     const transactionId = createRes.body.transaction.id;

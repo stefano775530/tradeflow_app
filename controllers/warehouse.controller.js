@@ -1,112 +1,61 @@
-const models = require("../models");
+const warehouseService = require("../services/warehouse.service");
 
 async function createWarehouse(req, res) {
-  try {
-    const { name, location } = req.body;
+  const warehouse = await warehouseService.createWarehouseForUser(
+    req.userData.userId,
+    req.body,
+  );
 
-    const warehouse = await models.Warehouse.create({
-      name,
-      location,
-      user_id: req.userData.userId,
-    });
-
-    res.status(201).json({
-      message: "Warehouse created",
-      warehouse,
-    });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(201).json({
+    message: "Warehouse created",
+    warehouse,
+  });
 }
 
 async function getWarehouses(req, res) {
-  try {
-    const warehouses = await models.Warehouse.findAll({
-      where: { user_id: req.userData.userId },
-    });
+  const result = await warehouseService.getWarehousesForUser(
+    req.userData.userId,
+    req.query,
+  );
 
-    res.status(200).json(warehouses);
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json(result);
 }
 
 async function getWarehouse(req, res) {
-  try {
-    const { id } = req.params;
+  const warehouse = await warehouseService.findOwnedWarehouseOrThrow(
+    req.userData.userId,
+    req.params.id,
+  );
 
-    const warehouse = await models.Warehouse.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!warehouse) {
-      return res.status(404).json({ message: "Warehouse not found" });
-    }
-
-    res.status(200).json(warehouse);
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json(warehouse);
 }
 
 async function updateWarehouse(req, res) {
-  try {
-    const { id } = req.params;
-    const { name, location } = req.body;
+  const warehouse = await warehouseService.updateWarehouseForUser(
+    req.userData.userId,
+    req.params.id,
+    req.body,
+  );
 
-    const warehouse = await models.Warehouse.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!warehouse) {
-      return res.status(404).json({ message: "Warehouse not found" });
-    }
-
-    warehouse.name = name !== undefined ? name : warehouse.name;
-    warehouse.location = location !== undefined ? location : warehouse.location;
-
-    await warehouse.save();
-
-    res.status(200).json({ message: "Updated", warehouse });
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json({
+    message: "Updated",
+    warehouse,
+  });
 }
 
 async function deleteWarehouse(req, res) {
-  try {
-    const { id } = req.params;
+  await warehouseService.deleteWarehouseForUser(
+    req.userData.userId,
+    req.params.id,
+  );
 
-    const warehouse = await models.Warehouse.findOne({
-      where: {
-        id,
-        user_id: req.userData.userId,
-      },
-    });
-
-    if (!warehouse) {
-      return res.status(404).json({ message: "Warehouse not found" });
-    }
-
-    await warehouse.destroy();
-
-    res.status(200).json({ message: "Warehouse deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Something went wrong" });
-  }
+  res.status(200).json({ message: "Warehouse deleted" });
 }
 
 module.exports = {
-  createWarehouse: createWarehouse,
-  getWarehouses: getWarehouses,
-  getWarehouse: getWarehouse,
-  updateWarehouse: updateWarehouse,
-  deleteWarehouse: deleteWarehouse,
+  createWarehouse,
+  getWarehouses,
+  getWarehouse,
+  updateWarehouse,
+  deleteWarehouse,
 };

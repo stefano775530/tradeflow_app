@@ -24,6 +24,7 @@ describe("Checks validation", () => {
         issue_date: "2026-04-01",
         status: "cashed",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     expect(res.statusCode).toBe(400);
@@ -46,6 +47,7 @@ describe("Checks validation", () => {
         cashing_date: "2026-04-05",
         status: "pending",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     expect(res.statusCode).toBe(400);
@@ -68,6 +70,7 @@ describe("Checks validation", () => {
         cashing_date: "2026-04-05",
         status: "cashed",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     expect(res.statusCode).toBe(400);

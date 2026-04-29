@@ -6,4 +6,6 @@ module.exports = {
   setupFilesAfterEnv: ["<rootDir>/tests/jest.setup.js"],
   clearMocks: true,
   verbose: true,
+  testEnvironment: "node",
+  maxWorkers: 1,
 };

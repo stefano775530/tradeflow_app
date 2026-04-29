@@ -24,6 +24,10 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.ENUM("income", "expense"),
         allowNull: false,
       },
+      company_name: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
       category: {
         type: DataTypes.ENUM(
           "sale",
@@ -50,7 +54,7 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
       },
       reference_type: {
-        type: DataTypes.ENUM("check", "storage", "manual"),
+        type: DataTypes.ENUM("check", "sale_payment", "purchase_payment"),
         allowNull: true,
       },
       reference_id: {

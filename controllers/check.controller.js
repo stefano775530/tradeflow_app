@@ -15,23 +15,12 @@ async function createCheck(req, res) {
 }
 
 async function getChecks(req, res) {
-  const { status, type } = req.query;
+  const result = await checkService.getChecksForUser(
+    req.userData.userId,
+    req.query,
+  );
 
-  const where = {
-    user_id: req.userData.userId,
-  };
-
-  if (status) {
-    where.status = status;
-  }
-
-  if (type) {
-    where.type = type;
-  }
-
-  const checks = await models.Check.findAll({ where });
-
-  res.status(200).json(checks);
+  res.status(200).json(result);
 }
 
 async function getCheck(req, res) {

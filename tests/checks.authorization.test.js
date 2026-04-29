@@ -33,6 +33,7 @@ describe("Checks ownership", () => {
         amount: 300,
         issue_date: "2026-04-01",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     const checkId = createRes.body.check.id;
@@ -64,6 +65,7 @@ describe("Checks ownership", () => {
         amount: 400,
         issue_date: "2026-04-01",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     const checkId = createRes.body.check.id;
@@ -96,6 +98,7 @@ describe("Checks ownership", () => {
         amount: 500,
         issue_date: "2026-04-01",
         type: "incoming",
+        company_name: "abo ali",
       });
 
     const checkId = createRes.body.check.id;
