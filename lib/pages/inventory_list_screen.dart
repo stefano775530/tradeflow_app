@@ -311,7 +311,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
 
     try {
       String url =
-          "https://roger-unimplored-luella.ngrok-free.dev/api/warehouse/${widget.warehouse.id}/storage";
+          "${ApiEndpoints.baseUrl}/warehouse/${widget.warehouse.id}/storage";
       if (_isEditMode && _selectedProductId != null) {
         url = "$url/$_selectedProductId";
       }
@@ -349,7 +349,7 @@ class _InventoryListScreenState extends State<InventoryListScreen> {
     try {
       final response = await http.delete(
         Uri.parse(
-          "https://roger-unimplored-luella.ngrok-free.dev/api/warehouse/${widget.warehouse.id}/storage/$productId",
+          "${ApiEndpoints.baseUrl}/${widget.warehouse.id}/storage/$productId",
         ),
         headers: {"Authorization": "Bearer $token"},
       );
