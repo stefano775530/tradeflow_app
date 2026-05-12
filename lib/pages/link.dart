@@ -12,6 +12,7 @@ class ApiEndpoints {
   static const String getWarehouses = "$baseUrl/warehouse";
   static const String goodsWarehouse = "$baseUrl/warehouse";
   static const String addsale = "$baseUrl/sales";
+
   static const String addPartner = "$baseUrl/partners/add";
   static const String getPartners = "$baseUrl/partners/all";
   static const String deletePartner = "$baseUrl/partners/delete";
@@ -21,6 +22,12 @@ class ApiEndpoints {
   static const String getChecks = "$baseUrl/checks";
 
   static String get transferWarehouse => "$baseUrl/warehouse/transfer";
-
   static String get getWarehouseProducts => "$baseUrl/warehouse/products";
+
+  static String get getDebts => "$baseUrl/sales";
+
+  static const String getDebtsToUs = "$baseUrl/debts/to-us";
+  static const String getDebtsFromUs = "$baseUrl/debts/from-us";
+  static const String getCustomerDetails = "$baseUrl/debts/details";
+  static const String addPayment = "$baseUrl/debts/add-payment";
 }

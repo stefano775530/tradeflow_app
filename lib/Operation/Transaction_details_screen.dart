@@ -41,7 +41,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
 
   List<Map?> selectedWarehousesList = [null];
 
-  int paymentMethod = 0;
+  String paymentMethod = "cash";
   List<Map<String, TextEditingController>> checks = [];
   DateTime? _selectedDate;
   final TextEditingController _dateController = TextEditingController();
@@ -125,7 +125,9 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
         }
 
         final int saleId = data['sale']['id'];
-        // 👇 إذا في دفع
+
+        print("SALE RESPONSE: ${response.body}");
+        print("SALE ID: ${data['sale']['id']}"); // 👇 إذا في دفع
         await handlePayment(saleId);
 
         ScaffoldMessenger.of(
@@ -143,39 +145,115 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     }
   }
 
-  Future<void> handlePayment(int? saleId) async {
-    if (saleId == null) return;
-    double amount = double.tryParse(_depositController.text) ?? 0;
+  // Future<void> handlePayment(int? saleId) async {
+  //   if (saleId == null) return;
 
-    if (paymentMethod == 0) {
+  //   double amount = double.tryParse(_depositController.text) ?? 0;
+
+  //   if (paymentMethod == 0) {
+  //     // نقدي
+  //     if (amount > 0) {
+  //       await sendPayment(saleId, "cash", amount);
+  //     }
+  //   } else if (paymentMethod == 1) {
+  //     // شيكات
+  //     for (var c in checks) {
+  //       double checkAmount = double.tryParse(c['amount']!.text) ?? 0;
+
+  //       // تخزين الشيك
+  //       await sendCheck(
+  //         bankName: c['bank']!.text,
+  //         checkNumber: c['number']!.text,
+  //         companyName: selectedPartner?['company_name'] ?? "",
+  //         amount: checkAmount,
+  //         cashingDate: c['date']!.text,
+  //       );
+
+  //       // تخزين payment للشيك
+  //       await sendPayment(saleId, "check", checkAmount);
+  //     }
+  //   }
+  // }
+  Future<void> handlePayment(int? saleId) async {
+    print("🔥 handlePayment ENTERED");
+    print("SALE ID INSIDE: $saleId");
+    if (saleId == null) return;
+    print("cashhh");
+    double amount = double.tryParse(_depositController.text) ?? 0;
+    print("ahmed: $amount, method: $paymentMethod");
+    if (paymentMethod == "cash") {
       // نقدي
+      print("cash");
       if (amount > 0) {
         await sendPayment(saleId, "cash", amount);
       }
-    } else if (paymentMethod == 1) {
+    } else if (paymentMethod == "check") {
+      print("check");
       for (var c in checks) {
         String bank = c['bank']!.text;
         String number = c['number']!.text;
         String date = c['date']!.text;
         double amount = double.tryParse(c['amount']!.text) ?? 0;
-
+        print("object: $bank, $number, $date, $amount");
         if (bank.isEmpty || number.isEmpty || date.isEmpty || amount <= 0) {
+          print("check skipped");
           continue; // تخطي الشيكات غير المكتملة
         }
 
-        await sendCheck(
-          bankName: bank,
-          checkNumber: number,
-          companyName:
-              selectedPartner?['company_name'] ??
-              selectedPartner?['name'] ??
-              "Unknown",
-          amount: amount,
-          cashingDate: date,
-        );
+        // final checkId = await sendCheck(
+        //   bankName: bank,
+        //   checkNumber: number,
+        //   companyName:
+        //       selectedPartner?['company_name'] ??
+        //       selectedPartner?['name'] ??
+        //       "Unknown",
+        //   amount: amount,
+        //   cashingDate: date,
+        // );
 
-        // ربط الشيك بالعملية المالية
-        await sendPayment(saleId, "check", amount, note: "شيك من ${bank}");
+        // if (checkId != null) {
+        //   // ربط الشيك بالعملية المالية
+        //   await sendPayment(
+        //     saleId,
+        //     "check",
+        //    amount,
+        //     note: "شيك من ${bank}",
+        //     checkData: {
+        //       "id": checkId,
+        //       "bank_name": bank,
+        //       "check_number": number,
+        //       "cashing_date": date,
+        //       "issue_date": _selectedDate != null
+        //           ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        //           : DateTime.now().toString().substring(0, 10),
+        //       "amount": amount,
+        //     },
+        //   );
+        // }
+        await sendPayment(
+          saleId,
+          "check",
+          amount,
+          note: "شيك من $bank",
+          checkData: {
+            "bank_name": bank,
+            "check_number": number,
+            "company_name":
+                selectedPartner?['company_name'] ??
+                selectedPartner?['name'] ??
+                "Unknown",
+
+            "issue_date": _selectedDate != null
+                ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+                : DateTime.now().toString().substring(0, 10),
+
+            "cashing_date": date,
+
+            "status": "pending",
+
+            "type": "صادر",
+          },
+        );
       }
     }
   }
@@ -195,7 +273,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     }
   }
 
-  Future<void> sendCheck({
+  Future<int?> sendCheck({
     required String bankName,
     required String checkNumber,
     required String companyName,
@@ -214,14 +292,25 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
           : DateTime.now().toString().substring(0, 10),
       "cashing_date": cashingDate,
       "status": "pending",
-      "type": "صادر",
+      "type": "وارد",
     };
 
-    await http.post(
-      Uri.parse(ApiEndpoints.addCheck), // تأكدي من الرابط
+    final response = await http.post(
+      Uri.parse(ApiEndpoints.addCheck),
       headers: headers,
       body: jsonEncode(body),
     );
+
+    print("CHECK RESPONSE: ${response.body}");
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+
+      // رجّعي check id
+      return data['check']['id'];
+    }
+
+    return null;
   }
 
   Future<void> sendPayment(
@@ -229,12 +318,13 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     String method,
     double amount, {
     String note = "",
+
     Map<String, dynamic>? checkData,
   }) async {
     final headers = await getHeaders();
 
     final body = {
-      "id": saleId,
+      "sale_id": saleId,
       "payment_method": method,
       "amount": amount,
       "payment_date": DateTime.now().toString().substring(0, 10),
@@ -243,11 +333,14 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     if (method == "check" && checkData != null) {
       body["check"] = checkData;
     }
-    await http.post(
-      Uri.parse("${ApiEndpoints.addsale}/$saleId/payments"), // تأكدي من الرابط
+    final response = await http.post(
+      Uri.parse("${ApiEndpoints.addsale}/$saleId/payments"),
       headers: headers,
       body: jsonEncode(body),
     );
+
+    print("PAYMENT STATUS: ${response.statusCode}");
+    print("PAYMENT RESPONSE: ${response.body}");
   }
 
   Future fetchPartners() async {
@@ -485,8 +578,13 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                   icon: Icons.payment_outlined,
                   child: Column(
                     children: [
-                      Row(children: [_payBtn("نقداً", 0), _payBtn("شيكات", 1)]),
-                      if (paymentMethod == 0) ...[
+                      Row(
+                        children: [
+                          _payBtn("نقداً", "cash"),
+                          _payBtn("شيكات", "check"),
+                        ],
+                      ),
+                      if (paymentMethod == "cash") ...[
                         const SizedBox(height: 15),
                         _customTextField(
                           "المبلغ المدفوع (\$)",
@@ -494,7 +592,7 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
                           Icons.money,
                         ),
                       ],
-                      if (paymentMethod == 1) _buildChecksSection(),
+                      if (paymentMethod == "check") _buildChecksSection(),
                       const Divider(height: 30),
                       _buildPriceRow(
                         "المبلغ المتبقي",
@@ -674,11 +772,11 @@ class _TransactionDetailsScreenState extends State<TransactionDetailsScreen> {
     );
   }
 
-  Widget _payBtn(String text, int type) {
-    bool isSelected = paymentMethod == type;
+  Widget _payBtn(String text, String type) {
+    bool isSelected = paymentMethod == type.toString();
     return Expanded(
       child: GestureDetector(
-        onTap: () => setState(() => paymentMethod = type),
+        onTap: () => setState(() => paymentMethod = type.toString()),
         child: Container(
           margin: const EdgeInsets.all(4),
           padding: const EdgeInsets.symmetric(vertical: 14),
