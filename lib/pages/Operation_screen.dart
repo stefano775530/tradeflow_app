@@ -258,6 +258,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:tradeflow_app/Operation/purchase_screen.dart';
 import '../Operation/Transaction_details_screen.dart';
 import '../Operation/financial_management_screen.dart';
 import '../Operation/warehouse_distribution_screen.dart';
@@ -393,8 +394,7 @@ class OperationScreen extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           // نمرر false لعملية الشراء
-                          builder: (_) =>
-                              const TransactionDetailsScreen(isSale: false),
+                          builder: (_) => const PurchaseScreen(),
                         ),
                       );
                     },

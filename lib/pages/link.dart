@@ -26,6 +26,9 @@ class ApiEndpoints {
 
   static String get getDebts => "$baseUrl/sales";
 
+  static const String addpurchase =
+      "$baseUrl/purchases"; // تأكد أن المسار مطابق للباك إند عندك
+
   static const String getDebtsToUs = "$baseUrl/debts/to-us";
   static const String getDebtsFromUs = "$baseUrl/debts/from-us";
   static const String getCustomerDetails = "$baseUrl/debts/details";
