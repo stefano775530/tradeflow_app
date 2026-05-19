@@ -191,4 +191,84 @@ router.post("/", checkAuth, controller.createPurchase);
  */
 router.post("/:id/payments", checkAuth, controller.addPurchasePayment);
 
+/**
+ * @openapi
+ * /api/purchases:
+ *   get:
+ *     tags:
+ *       - Purchases
+ *     summary: Get purchases for the authenticated user
+ *     description: Returns paginated purchases with supplier data, debt fields, items, payments, and filters for payment status.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: payment_status
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [unpaid, partial, paid]
+ *         description: Filter purchases by payment status.
+ *       - in: query
+ *         name: status
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [draft, completed, cancelled]
+ *         description: Filter purchases by purchase status.
+ *       - in: query
+ *         name: partner_id
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Filter purchases by supplier/partner ID.
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *       - in: query
+ *         name: sortBy
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [purchase_date, total_amount, paid_amount, remaining_amount, created_at, id]
+ *           example: purchase_date
+ *       - in: query
+ *         name: sortOrder
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           example: DESC
+ *     responses:
+ *       200:
+ *         description: Paginated list of purchases
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PurchaseListResponse'
+ *       400:
+ *         description: Invalid query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedResponse'
+ */
+router.get("/", checkAuth, controller.getPurchases);
+
 module.exports = router;

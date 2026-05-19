@@ -24,8 +24,17 @@ async function addPurchasePayment(req, res) {
     purchase,
   });
 }
+async function getPurchases(req, res) {
+  const result = await purchaseService.getPurchasesForUser(
+    req.userData.userId,
+    req.query,
+  );
+
+  res.status(200).json(result);
+}
 
 module.exports = {
   createPurchase,
   addPurchasePayment,
+  getPurchases
 };

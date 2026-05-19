@@ -823,6 +823,359 @@ describe("Purchases API", () => {
 
     expect(res.statusCode).toBe(401);
   });
+  test("get purchases returns paginated purchases with debt fields and supplier data", async () => {
+    const { token, user } = await createAuthUser(
+      "purchase-list1@test.com",
+      "+14155550431",
+    );
+
+    const supplier = await createSupplierForUser(user.id);
+    const warehouse = await createWarehouseForUser(user.id);
+
+    const createRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplier.id,
+        purchase_date: "2026-04-12",
+        invoice_number: "PUR-LIST-1",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 100,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 100 }],
+          },
+        ],
+        payments: [
+          {
+            payment_method: "cash",
+            amount: 10000,
+            payment_date: "2026-04-12",
+          },
+        ],
+      });
+
+    expect(createRes.statusCode).toBe(201);
+
+    const res = await request(app)
+      .get("/api/purchases?page=1&limit=10")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+
+    expect(res.body.page).toBe(1);
+    expect(res.body.limit).toBe(10);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.totalPages).toBe(1);
+    expect(res.body.hasNextPage).toBe(false);
+    expect(res.body.hasPrevPage).toBe(false);
+    expect(Array.isArray(res.body.data)).toBe(true);
+    expect(res.body.data).toHaveLength(1);
+
+    const purchase = res.body.data[0];
+
+    expect(purchase.id).toBe(createRes.body.purchase.id);
+    expect(Number(purchase.total_amount)).toBe(30000);
+    expect(Number(purchase.paid_amount)).toBe(10000);
+    expect(Number(purchase.remaining_amount)).toBe(20000);
+    expect(purchase.payment_status).toBe("partial");
+
+    expect(purchase.Partner).toBeDefined();
+    expect(purchase.Partner.company_name).toBe("Supplier One");
+  });
+
+  test("get purchases can filter by payment_status partial unpaid and paid", async () => {
+    const { token, user } = await createAuthUser(
+      "purchase-list2@test.com",
+      "+14155550432",
+    );
+
+    const supplier = await createSupplierForUser(user.id);
+    const warehouse = await createWarehouseForUser(user.id);
+
+    const unpaidCreateRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplier.id,
+        purchase_date: "2026-04-10",
+        invoice_number: "PUR-UNPAID",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 50 }],
+          },
+        ],
+      });
+
+    expect(unpaidCreateRes.statusCode).toBe(201);
+
+    const partialCreateRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplier.id,
+        purchase_date: "2026-04-11",
+        invoice_number: "PUR-PARTIAL",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 50 }],
+          },
+        ],
+        payments: [
+          {
+            payment_method: "cash",
+            amount: 5000,
+            payment_date: "2026-04-11",
+          },
+        ],
+      });
+
+    expect(partialCreateRes.statusCode).toBe(201);
+
+    const paidCreateRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplier.id,
+        purchase_date: "2026-04-12",
+        invoice_number: "PUR-PAID",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 50 }],
+          },
+        ],
+        payments: [
+          {
+            payment_method: "cash",
+            amount: 15000,
+            payment_date: "2026-04-12",
+          },
+        ],
+      });
+
+    expect(paidCreateRes.statusCode).toBe(201);
+
+    const unpaidRes = await request(app)
+      .get("/api/purchases?payment_status=unpaid")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(unpaidRes.statusCode).toBe(200);
+    expect(unpaidRes.body.totalItems).toBe(1);
+    expect(unpaidRes.body.data[0].payment_status).toBe("unpaid");
+    expect(Number(unpaidRes.body.data[0].remaining_amount)).toBe(15000);
+
+    const partialRes = await request(app)
+      .get("/api/purchases?payment_status=partial")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(partialRes.statusCode).toBe(200);
+    expect(partialRes.body.totalItems).toBe(1);
+    expect(partialRes.body.data[0].payment_status).toBe("partial");
+    expect(Number(partialRes.body.data[0].remaining_amount)).toBe(10000);
+
+    const paidRes = await request(app)
+      .get("/api/purchases?payment_status=paid")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(paidRes.statusCode).toBe(200);
+    expect(paidRes.body.totalItems).toBe(1);
+    expect(paidRes.body.data[0].payment_status).toBe("paid");
+    expect(Number(paidRes.body.data[0].remaining_amount)).toBe(0);
+  });
+
+  test("get purchases can filter by partner_id", async () => {
+    const { token, user } = await createAuthUser(
+      "purchase-list3@test.com",
+      "+14155550433",
+    );
+
+    const supplierA = await createSupplierForUser(user.id, {
+      company_name: "Supplier A",
+      phone_number: "+14155550010",
+    });
+
+    const supplierB = await createSupplierForUser(user.id, {
+      company_name: "Supplier B",
+      phone_number: "+14155550011",
+    });
+
+    const warehouse = await createWarehouseForUser(user.id);
+
+    const purchaseARes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplierA.id,
+        purchase_date: "2026-04-12",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 50 }],
+          },
+        ],
+      });
+
+    expect(purchaseARes.statusCode).toBe(201);
+
+    const purchaseBRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        partner_id: supplierB.id,
+        purchase_date: "2026-04-12",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "8",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouse.id, quantity: 50 }],
+          },
+        ],
+      });
+
+    expect(purchaseBRes.statusCode).toBe(201);
+
+    const res = await request(app)
+      .get(`/api/purchases?partner_id=${supplierA.id}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.data[0].partner_id).toBe(supplierA.id);
+    expect(res.body.data[0].Partner.company_name).toBe("Supplier A");
+  });
+
+  test("user cannot see another user's purchases", async () => {
+    const { token: tokenA, user: userA } = await createAuthUser(
+      "purchase-list4a@test.com",
+      "+14155550434",
+    );
+
+    const { token: tokenB, user: userB } = await createAuthUser(
+      "purchase-list4b@test.com",
+      "+14155550435",
+    );
+
+    const supplierA = await createSupplierForUser(userA.id, {
+      phone_number: "+14155550012",
+    });
+
+    const warehouseA = await createWarehouseForUser(userA.id);
+
+    const purchaseARes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({
+        partner_id: supplierA.id,
+        purchase_date: "2026-04-12",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouseA.id, quantity: 50 }],
+          },
+        ],
+      });
+
+    expect(purchaseARes.statusCode).toBe(201);
+
+    const supplierB = await createSupplierForUser(userB.id, {
+      company_name: "User B Supplier",
+      phone_number: "+14155550013",
+    });
+
+    const warehouseB = await createWarehouseForUser(userB.id);
+
+    const purchaseBRes = await request(app)
+      .post("/api/purchases")
+      .set("Authorization", `Bearer ${tokenB}`)
+      .send({
+        partner_id: supplierB.id,
+        purchase_date: "2026-04-12",
+        items: [
+          {
+            item_name: "wood",
+            thickness: "6",
+            quantity: 50,
+            unit_cost: 300,
+            sale_price: 500,
+            expiration_date: null,
+            minimum_quantity: 10,
+            allocations: [{ warehouse_id: warehouseB.id, quantity: 50 }],
+          },
+        ],
+      });
+
+    expect(purchaseBRes.statusCode).toBe(201);
+
+    const res = await request(app)
+      .get("/api/purchases")
+      .set("Authorization", `Bearer ${tokenA}`);
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.totalItems).toBe(1);
+    expect(res.body.data[0].user_id).toBe(userA.id);
+  });
+
+  test("get purchases rejects invalid payment_status", async () => {
+    const { token } = await createAuthUser(
+      "purchase-list5@test.com",
+      "+14155550436",
+    );
+
+    const res = await request(app)
+      .get("/api/purchases?payment_status=late")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  test("unauthenticated get purchases returns 401", async () => {
+    const res = await request(app).get("/api/purchases");
+
+    expect(res.statusCode).toBe(401);
+  });
 
   test("unauthenticated add purchase payment returns 401", async () => {
     const res = await request(app).post("/api/purchases/999/payments").send({

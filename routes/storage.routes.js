@@ -174,6 +174,21 @@ router.get("/:id", checkAuth, controller.getStorage);
 
 /**
  * @openapi
+ * /api/reports/storage-valuation:
+ *   get:
+ *     tags:
+ *       - Reports
+ *     summary: Get all storage items for the user across all warehouses
+ *     responses:
+ *       200:
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/InventoryValuationResponse'
+ */
+
+/**
+ * @openapi
  * /api/warehouse/{warehouseId}/storage/{id}:
  *   patch:
  *     tags:

@@ -1,4 +1,3 @@
-const { not } = require("supertest/lib/cookies");
 const models = require("../models");
 const { AppError } = require("../utils/app-error");
 
@@ -47,8 +46,8 @@ function resolveCheckState(input, existing = null) {
     throw new AppError(400, "Cashing date is required when status is cashed");
   }
 
-  //if (finalStatus === "pending" && finalCashingDate) {
-  //  throw new AppError(400, "Pending check cannot have a cashing date");
+  // if (finalStatus === "pending" && finalCashingDate) {
+  // throw new AppError(400, "Pending check cannot have a cashing date");
   //}
 
   if (finalCashingDate && finalIssueDate && finalCashingDate < finalIssueDate) {
@@ -69,11 +68,10 @@ function resolveCheckState(input, existing = null) {
         : existing?.check_number,
     amount: input.amount !== undefined ? input.amount : existing?.amount,
     issue_date: finalIssueDate,
-    cashing_date: finalStatus === "cashed" ? finalCashingDate : null,
+    cashing_date: finalCashingDate,
     status: finalStatus,
     type: finalType,
     company_name: companyName,
-    note: input.note !== undefined ? input.note : existing?.note,
   };
 }
 
@@ -224,7 +222,6 @@ async function syncCheckTransaction(check, transaction) {
     reference_type: "check",
     reference_id: check.id,
     company_name: check.company_name,
-    note: check.note,
   };
 
   if (!existingTransaction) {
@@ -238,7 +235,6 @@ async function syncCheckTransaction(check, transaction) {
   existingTransaction.description = transactionData.description;
   existingTransaction.transaction_date = transactionData.transaction_date;
   existingTransaction.company_name = transactionData.company_name;
-  existingTransaction.note = transactionData.note;
 
   await existingTransaction.save({ transaction });
 }
@@ -276,7 +272,6 @@ async function updateCheckForUser(userId, id, payload) {
     check.status = data.status;
     check.type = data.type;
     check.company_name = data.company_name;
-    check.note = data.note;
 
     await check.save({ transaction });
 

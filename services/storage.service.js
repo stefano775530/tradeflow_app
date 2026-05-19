@@ -107,6 +107,21 @@ async function findOwnedStorageOrThrow(userId, warehouseId, storageId) {
   return storage;
 }
 
+async function getAllUserStorageItems(userId) {
+  const items = await models.Storage.findAll({
+    include: [
+      {
+        model: models.Warehouse,
+        where: { user_id: userId },
+        attributes: ["id", "name"], // لجلب اسم المستودع بجانب كل قطعة
+      },
+    ],
+    order: [["name", "ASC"]], // ترتيب البضاعة أبجدياً
+  });
+
+  return items;
+}
+
 async function updateStorageForUser(userId, warehouseId, storageId, payload) {
   const storage = await findOwnedStorageOrThrow(userId, warehouseId, storageId);
 
@@ -151,4 +166,5 @@ module.exports = {
   findOwnedStorageOrThrow,
   updateStorageForUser,
   deleteStorageForUser,
+  getAllUserStorageItems,
 };

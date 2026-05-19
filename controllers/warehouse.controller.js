@@ -52,10 +52,22 @@ async function deleteWarehouse(req, res) {
   res.status(200).json({ message: "Warehouse deleted" });
 }
 
+async function getWarehousesWithStorage(req, res) {
+  const warehouses = await warehouseService.getAllWarehousesWithStorageForUser(
+    req.userData.userId,
+  );
+
+  res.status(200).json({
+    count: warehouses.length,
+    data: warehouses,
+  });
+}
+
 module.exports = {
   createWarehouse,
   getWarehouses,
   getWarehouse,
   updateWarehouse,
   deleteWarehouse,
+  getWarehousesWithStorage,
 };

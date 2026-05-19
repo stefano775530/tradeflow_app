@@ -286,6 +286,21 @@ const options = {
           },
         },
 
+        WarehouseWithStorage: {
+          type: "object",
+          properties: {
+            id: { type: "integer", example: 1 },
+            name: { type: "string", example: "Main Warehouse" },
+            location: { type: "string", example: "Seattle" },
+            Storages: {
+              type: "array",
+              items: {
+                $ref: "#/components/schemas/Storage",
+              },
+            },
+          },
+        },
+
         Storage: {
           type: "object",
           properties: {
@@ -396,6 +411,36 @@ const options = {
             },
             storage: {
               $ref: "#/components/schemas/Storage",
+            },
+          },
+        },
+
+        InventoryValuationResponse: {
+          type: "object",
+          properties: {
+            totalItems: { type: "integer", example: 5 },
+            totalPurchaseValue: { type: "number", example: 1500.5 },
+            totalSaleValue: { type: "number", example: 2500.0 },
+            totalExpectedProfit: { type: "number", example: 999.5 },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "integer" },
+                  name: { type: "string", example: "خشب MDF" },
+                  quantity: { type: "integer", example: 100 },
+                  thickness: { type: "string", example: "6" },
+                  purchase_price: { type: "number" },
+                  sale_price: { type: "number" },
+                  warehouse: {
+                    type: "object",
+                    properties: {
+                      name: { type: "string", example: "مستودع الشمال" },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -1407,6 +1452,24 @@ const options = {
           },
         },
 
+        SaleListResponse: {
+          type: "object",
+          properties: {
+            page: { type: "integer", example: 1 },
+            limit: { type: "integer", example: 100 },
+            totalItems: { type: "integer", example: 25 },
+            totalPages: { type: "integer", example: 3 },
+            hasNextPage: { type: "boolean", example: true },
+            hasPrevPage: { type: "boolean", example: false },
+            data: {
+              type: "array",
+              items: {
+                $ref: "#/components/schemas/SaleResponse",
+              },
+            },
+          },
+        },
+
         SaleAddPaymentRequest: {
           type: "object",
           required: ["payment_method", "amount", "payment_date"],
@@ -1827,6 +1890,23 @@ const options = {
                 },
               },
             ],
+          },
+        },
+        PurchaseListResponse: {
+          type: "object",
+          properties: {
+            page: { type: "integer", example: 1 },
+            limit: { type: "integer", example: 10 },
+            totalItems: { type: "integer", example: 25 },
+            totalPages: { type: "integer", example: 3 },
+            hasNextPage: { type: "boolean", example: true },
+            hasPrevPage: { type: "boolean", example: false },
+            data: {
+              type: "array",
+              items: {
+                $ref: "#/components/schemas/PurchaseResponse",
+              },
+            },
           },
         },
 

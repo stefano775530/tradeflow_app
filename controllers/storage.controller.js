@@ -33,6 +33,17 @@ async function getStorage(req, res) {
   res.status(200).json(storage);
 }
 
+async function getAllMyStorage(req, res) {
+  const items = await storageService.getAllUserStorageItems(
+    req.userData.userId,
+  );
+
+  res.status(200).json({
+    count: items.length,
+    data: items,
+  });
+}
+
 async function updateStorage(req, res) {
   const storage = await storageService.updateStorageForUser(
     req.userData.userId,
@@ -63,4 +74,5 @@ module.exports = {
   getStorage,
   updateStorage,
   deleteStorage,
+  getAllMyStorage,
 };

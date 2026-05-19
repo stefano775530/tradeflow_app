@@ -105,6 +105,38 @@ router.get("/", checkAuth, controller.getWarehouses);
 
 /**
  * @openapi
+ * /api/warehouse/all-with-storage:
+ *   get:
+ *     tags:
+ *       - Warehouses
+ *     summary: Get all warehouses including their storage items for the user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Success
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 count:
+ *                   type: integer
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/WarehouseWithStorage'
+ *       401:
+ *         $ref: '#/components/schemas/UnauthorizedResponse'
+ */
+router.get(
+  "/all-with-storage",
+  checkAuth,
+  controller.getWarehousesWithStorage, // تأكد من إضافة هذه الدالة في الـ Controller
+);
+
+/**
+ * @openapi
  * /api/warehouse/{id}:
  *   get:
  *     tags:

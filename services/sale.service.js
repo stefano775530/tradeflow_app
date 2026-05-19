@@ -1,5 +1,6 @@
 const models = require("../models");
 const { AppError } = require("../utils/app-error");
+const { Op } = require("sequelize");
 
 function toNumber(value) {
   return Number(value || 0);
@@ -29,9 +30,9 @@ function buildCheckState(checkInput = {}, paymentAmount, partnerName) {
     );
   }
 
-  if (finalStatus === "pending" && finalCashingDate) {
-    throw new AppError(400, "Pending check cannot have a cashing date");
-  }
+  // if (finalStatus === "pending" && finalCashingDate) {
+  // throw new AppError(400, "Pending check cannot have a cashing date");
+  //}
 
   if (finalCashingDate && finalIssueDate && finalCashingDate < finalIssueDate) {
     throw new AppError(400, "Cashing date cannot be before issue date");
@@ -295,6 +296,7 @@ async function createSaleForUser(userId, payload) {
       }
 
       if (payment.payment_method === "check") {
+        console.log(payment);
         return {
           payment_method: "check",
           amount,
@@ -642,7 +644,119 @@ async function addPaymentToSaleForUser(userId, saleId, payload) {
   });
 }
 
+async function getSalesForUser(userId, query) {
+  const {
+    payment_status,
+    status,
+    partner_id,
+    page = 1,
+    limit = 100,
+    sortBy = "sale_date",
+    sortOrder = "DESC",
+  } = query;
+
+  const normalizedPage = Math.max(Number(page) || 1, 1);
+  const normalizedLimit = Math.min(Math.max(Number(limit) || 100, 1), 100);
+  const offset = (normalizedPage - 1) * normalizedLimit;
+
+  const allowedSortFields = [
+    "sale_date",
+    "total_amount",
+    "paid_amount",
+    "remaining_amount",
+    "created_at",
+    "id",
+  ];
+
+  const finalSortBy = allowedSortFields.includes(sortBy) ? sortBy : "sale_date";
+
+  const finalSortOrder =
+    String(sortOrder).toUpperCase() === "ASC" ? "ASC" : "DESC";
+
+  // إعداد شروط البحث الأساسية
+  const where = {
+    user_id: userId,
+    // التعديل هنا: استثناء أي عملية بيع يكون المتبقي فيها صفر أو أقل
+    remaining_amount: {
+      [Op.gt]: 0,
+    },
+  };
+
+  if (payment_status) {
+    const allowedPaymentStatuses = ["unpaid", "partial", "paid"];
+
+    if (!allowedPaymentStatuses.includes(payment_status)) {
+      throw new AppError(
+        400,
+        "payment_status must be one of: unpaid, partial, paid",
+      );
+    }
+
+    where.payment_status = payment_status;
+  }
+
+  if (status) {
+    const allowedStatuses = ["draft", "completed", "cancelled"];
+
+    if (!allowedStatuses.includes(status)) {
+      throw new AppError(
+        400,
+        "status must be one of: draft, completed, cancelled",
+      );
+    }
+
+    where.status = status;
+  }
+
+  if (partner_id) {
+    where.partner_id = Number(partner_id);
+  }
+
+  const { count, rows } = await models.Sale.findAndCountAll({
+    where,
+    include: [
+      {
+        model: models.Partner,
+        attributes: ["id", "company_name", "partner_type", "phone_number"],
+      },
+      {
+        model: models.SaleItem,
+        include: [
+          {
+            model: models.SaleItemAllocation,
+            include: [{ model: models.Storage }],
+          },
+        ],
+      },
+      {
+        model: models.Payment,
+        include: [{ model: models.Check }],
+      },
+    ],
+    order: [
+      [finalSortBy, finalSortOrder],
+      ["id", "DESC"],
+    ],
+    offset,
+    limit: normalizedLimit, // تمت إضافة limit هنا لأنها كانت مفقودة في كودك الأصلي وتعتبر ضرورية لعملية الـ Pagination
+    distinct: true,
+  });
+
+  const totalItems = count;
+  const totalPages = Math.ceil(totalItems / normalizedLimit) || 1;
+
+  return {
+    page: normalizedPage,
+    totalItems,
+    totalPages,
+    hasNextPage: normalizedPage < totalPages,
+    hasPrevPage: normalizedPage > 1,
+    data: rows,
+  };
+}
+
 module.exports = {
   createSaleForUser,
   addPaymentToSaleForUser,
+  getSalesForUser,
 };

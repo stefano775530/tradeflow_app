@@ -83,10 +83,37 @@ async function deleteWarehouseForUser(userId, warehouseId) {
   await warehouse.destroy();
 }
 
+async function getAllWarehousesWithStorageForUser(userId) {
+  const warehouses = await models.Warehouse.findAll({
+    where: { user_id: userId },
+    include: [
+      {
+        model: models.Storage,
+        // يمكنك تحديد الأعمدة التي تريدها فقط لتقليل حجم البيانات
+        attributes: [
+          "id",
+          "name",
+          "quantity",
+          "thickness",
+          "purchase_price",
+          "sale_price",
+        ],
+      },
+    ],
+    order: [
+      ["name", "ASC"], // ترتيب المستودعات أبجدياً
+      [models.Storage, "name", "ASC"], // ترتيب البضائع داخل كل مستودع
+    ],
+  });
+
+  return warehouses;
+}
+
 module.exports = {
   createWarehouseForUser,
   getWarehousesForUser,
   findOwnedWarehouseOrThrow,
   updateWarehouseForUser,
   deleteWarehouseForUser,
+  getAllWarehousesWithStorageForUser,
 };

@@ -23,8 +23,17 @@ async function addSalePayment(req, res) {
     sale,
   });
 }
+async function getSales(req, res) {
+  const result = await saleService.getSalesForUser(
+    req.userData.userId,
+    req.query,
+  );
+
+  res.status(200).json(result);
+}
 
 module.exports = {
   createSale,
   addSalePayment,
+  getSales
 };

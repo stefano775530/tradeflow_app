@@ -245,7 +245,7 @@ const createCheckValidation = validate([
   body("type")
     .notEmpty()
     .withMessage("Type is required")
-    .isIn(["وارد", "صادر"])
+    .isIn(["صادر", "وارد"])
     .withMessage("Type must be incoming or outgoing"),
 
   body("status")
@@ -260,7 +260,7 @@ const createCheckValidation = validate([
 
       //if (value === "pending" && cashingDate) {
       //  throw new Error("Pending check cannot have a cashing date");
-      //}
+      //  }
 
       return true;
     }),
@@ -277,7 +277,7 @@ const createCheckValidation = validate([
     }
 
     //if (status === "pending" && cashing_date) {
-    // throw new Error("Pending check cannot have a cashing date");
+    //  throw new Error("Pending check cannot have a cashing date");
     //}
 
     return true;
@@ -330,7 +330,7 @@ const updateCheckValidation = validate([
 
   body("type")
     .optional()
-    .isIn(["وارد", "صادر"])
+    .isIn(["صادر", "وارد"])
     .withMessage("Type must be incoming or outgoing"),
 
   body("status")

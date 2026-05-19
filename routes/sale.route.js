@@ -176,4 +176,90 @@ router.post("/", checkAuth, controller.createSale);
  */
 router.post("/:id/payments", checkAuth, controller.addSalePayment);
 
+/**
+ * @openapi
+ * /api/sales:
+ *   get:
+ *     tags:
+ *       - Sales
+ *     summary: Get sales for the authenticated user
+ *     description: Returns paginated sales with customer, debt fields, items, payments, and filters for payment status so sellers can see who has paid and who still owes money.
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: payment_status
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [unpaid, partial, paid]
+ *         description: Filter sales by payment status
+ *       - in: query
+ *         name: status
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [draft, completed, cancelled]
+ *         description: Filter sales by sale status
+ *       - in: query
+ *         name: partner_id
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *         description: Filter sales by customer/partner ID
+ *       - in: query
+ *         name: page
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 1
+ *       - in: query
+ *         name: limit
+ *         required: false
+ *         schema:
+ *           type: integer
+ *           example: 10
+ *       - in: query
+ *         name: sortBy
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum:
+ *             - sale_date
+ *             - total_amount
+ *             - paid_amount
+ *             - remaining_amount
+ *             - created_at
+ *             - id
+ *           example: sale_date
+ *       - in: query
+ *         name: sortOrder
+ *         required: false
+ *         schema:
+ *           type: string
+ *           enum: [ASC, DESC]
+ *           example: DESC
+ *     responses:
+ *       200:
+ *         description: Paginated list of sales
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/SaleListResponse'
+ *       400:
+ *         description: Invalid query parameter
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       401:
+ *         description: Unauthorized
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UnauthorizedResponse'
+ */
+router.get("/", checkAuth, controller.getSales);
+
 module.exports = router;

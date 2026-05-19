@@ -47,9 +47,9 @@ module.exports = {
         defaultValue: "pending",
       },
       type: {
-        type: Sequelize.ENUM("وارد", "صادر"),
+        type: Sequelize.ENUM("صادر", "وارد"),
         allowNull: false,
-        defaultValue: "وارد",
+        defaultValue: "صادر",
       },
       created_at: {
         allowNull: false,
@@ -60,10 +60,6 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.NOW,
-      },
-      note: {
-        type: Sequelize.TEXT,
-        allowNull: true,
       },
     });
   },
