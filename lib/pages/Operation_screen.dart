@@ -291,7 +291,7 @@ class OperationScreen extends StatelessWidget {
           children: [
             _buildOperationCard(
               context: context,
-              title: 'تفاصيل العملية',
+              title: 'إنشاء عملية',
               subtitle:
                   'اختر نوع العملية (بيع أو شراء) لمتابعة تفاصيل العميل والمستودع.',
               imagePath: 'images/image 17.png',

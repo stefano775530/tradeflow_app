@@ -21,13 +21,17 @@ class ApiEndpoints {
   static const String addCheck = "$baseUrl/checks";
   static const String getChecks = "$baseUrl/checks";
 
+  static const String pur = "$baseUrl/purchases";
   static String get transferWarehouse => "$baseUrl/warehouse/transfer";
   static String get getWarehouseProducts => "$baseUrl/warehouse/products";
-
+  static const String allproducts = "$baseUrl/reports/storage-valuation";
   static String get getDebts => "$baseUrl/sales";
 
   static const String addpurchase =
       "$baseUrl/purchases"; // تأكد أن المسار مطابق للباك إند عندك
+
+  static const String getSuppliersDebts =
+      "$baseUrl/purchases"; // تأكد أن المسار مطابق للباك إند عندكr
 
   static const String getDebtsToUs = "$baseUrl/debts/to-us";
   static const String getDebtsFromUs = "$baseUrl/debts/from-us";
