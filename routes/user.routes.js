@@ -10,6 +10,7 @@ const {
   loginLimiter,
   forgotPasswordLimiter,
 } = require("../middleware/rateLimiter");
+const { checkAuth } = require("../middleware/check-auth");
 
 const router = express.Router();
 
@@ -171,4 +172,30 @@ router.post(
   resetPasswordValidation,
   userController.resetPassword,
 );
+
+/**
+ * @openapi
+ * /api/user/logout:
+ *   post:
+ *     tags:
+ *       - Auth
+ *     summary: Logout user
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Logout successful
+ *       401:
+ *         description: Unauthorized
+ */
+router.post("/logout", checkAuth, userController.logout);
+
 module.exports = router;

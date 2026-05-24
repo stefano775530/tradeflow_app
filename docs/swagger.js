@@ -639,10 +639,7 @@ const options = {
               example: 3,
             },
             user_id: { type: "integer", example: 1 },
-            createdAt: {
-              type: "string",
-              format: "date-time",
-            },
+
             updatedAt: {
               type: "string",
               format: "date-time",
@@ -1743,25 +1740,34 @@ const options = {
           properties: {
             payment_method: {
               type: "string",
-              enum: ["cash", "check"],
-              example: "cash",
+              enum: ["cash", "check", "existing_check"],
+              description:
+                "Payment method: cash, new outgoing check, or existing incoming check",
+              example: "existing_check",
             },
             amount: {
               type: "number",
-              example: 20000,
+              example: 500,
             },
             payment_date: {
               type: "string",
               format: "date",
-              example: "2026-04-13",
+              example: "2026-05-19",
+            },
+            check_id: {
+              type: "integer",
+              description:
+                "Required only if payment_method is 'existing_check'",
+              example: 12,
             },
             notes: {
               type: "string",
-              nullable: true,
-              example: "second purchase payment",
+              example: "Payment using an existing incoming check",
             },
             check: {
-              $ref: "#/components/schemas/PurchaseAddPaymentCheckInput",
+              $ref: "#/components/schemas/CheckCreateRequest",
+              description:
+                "Required only if payment_method is 'check' (new outgoing check)",
             },
           },
         },

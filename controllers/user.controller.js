@@ -134,9 +134,22 @@ async function resetPassword(req, res) {
     res.status(500).json({ message: "Something went wrong!" });
   }
 }
+
+async function logout(req, res) {
+  try {
+    // هنا نخبر الفرونت إند أن العملية تمت بنجاح
+    // والفرونت إند عليه مسح التوكن من المتصفح
+    res.status(200).json({ message: "Logout successful" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Something went wrong!" });
+  }
+}
+
 module.exports = {
   signUp: signUp,
   login: login,
   forgotPassword: forgotPassword,
   resetPassword: resetPassword,
+  logout: logout, // تأكد من إضافة الوظيفة هنا لتصديرها
 };

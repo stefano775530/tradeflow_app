@@ -216,4 +216,49 @@ router.get("/storage-valuation", checkAuth, controller.getInventoryValuation);
  */
 router.get("/zakat", checkAuth, controller.getZakatReport);
 
+/**
+ * @openapi
+ * /api/reports/incoming-checks-monthly:
+ *   get:
+ *     tags:
+ *       - Reports
+ *     summary: Get monthly total for incoming checks for a specific year
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: year
+ *         required: true
+ *         schema:
+ *           type: integer
+ *           example: 2026
+ *         description: Year number
+ *     responses:
+ *       200:
+ *         description: Monthly breakdown generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 year:
+ *                   type: integer
+ *                 monthlyBreakdown:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       month:
+ *                         type: integer
+ *                       totalIncomingAmount:
+ *                         type: number
+ *       401:
+ *         description: Unauthorized
+ */
+router.get(
+  "/incoming-checks-monthly",
+  checkAuth,
+  controller.getIncomingChecksMonthly,
+);
+
 module.exports = router;

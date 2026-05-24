@@ -49,6 +49,16 @@ async function getZakatReport(req, res) {
   res.status(200).json(report);
 }
 
+// الدالة الجديدة لاستدعاء تقرير الشيكات الواردة شهرياً
+async function getIncomingChecksMonthly(req, res) {
+  const report = await reportService.getMonthlyIncomingChecksReport(
+    req.userData.userId,
+    req.query,
+  );
+
+  res.status(200).json(report);
+}
+
 module.exports = {
   getMonthlyReport,
   getDashboardSummary,
@@ -56,4 +66,5 @@ module.exports = {
   getYearlyReport,
   getInventoryValuation,
   getZakatReport,
+  getIncomingChecksMonthly, // تمت إضافة التصدير هنا
 };

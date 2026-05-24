@@ -421,14 +421,22 @@ async function getInventoryValuationForUser(userId) {
 }
 
 async function getZakatReportForUser(userId) {
-  const [totalIncome, totalExpense, storageItems] = await Promise.all([
+  const [
+    totalIncome,
+    totalExpense,
+    storageItems,
+    totalReceivables, // حساب الديون التي لك
+    totalIncomingChecks, // حساب كافة الشيكات الواردة
+  ] = await Promise.all([
     sumTransactionAmount({
       user_id: userId,
       type: "income",
+      category: "sale",
     }),
     sumTransactionAmount({
       user_id: userId,
       type: "expense",
+      category: "purchase",
     }),
     models.Storage.findAll({
       include: [
@@ -440,6 +448,17 @@ async function getZakatReportForUser(userId) {
       ],
       raw: true,
     }),
+    // منطق جلب الديون المتبقية من فواتير البيع
+    sumModelField(models.Sale, "remaining_amount", {
+      user_id: userId,
+      status: { [Op.ne]: "cancelled" },
+    }),
+    // منطق جلب مبالغ جميع الشيكات الواردة بغض النظر عن حالتها
+    sumModelField(models.Check, "amount", {
+      user_id: userId,
+      type: "وارد",
+      // تمت إزالة شرط status: "pending" لجلب كافة الشيكات الواردة
+    }),
   ]);
 
   const netCash = totalIncome - totalExpense;
@@ -448,7 +467,9 @@ async function getZakatReportForUser(userId) {
     return sum + Number(item.quantity) * Number(item.sale_price);
   }, 0);
 
-  const zakatBase = netCash + inventoryValue;
+  // الوعاء الجديد يشمل الديون وكافة الشيكات الواردة
+  const zakatBase =
+    netCash + inventoryValue + totalReceivables + totalIncomingChecks;
   const zakatDue = zakatBase > 0 ? zakatBase * 0.025 : 0;
 
   return {
@@ -456,9 +477,46 @@ async function getZakatReportForUser(userId) {
     totalExpense,
     netCash,
     inventoryValue,
+    totalReceivables,
+    totalIncomingChecks,
     zakatBase,
     zakatRate: 0.025,
     zakatDue,
+  };
+}
+
+// الدالة الجديدة المطلوبة لجمع الشيكات الواردة شهرياً
+async function getMonthlyIncomingChecksReport(userId, query) {
+  const { year, startDate, endDate } = buildYearlyRange(query.year);
+
+  const checks = await models.Check.findAll({
+    where: {
+      user_id: userId,
+      type: "وارد",
+      issue_date: {
+        [Op.gte]: startDate,
+        [Op.lt]: endDate,
+      },
+    },
+    attributes: ["amount", "issue_date"],
+    raw: true,
+  });
+
+  const monthlyData = {};
+  for (let i = 1; i <= 12; i++) {
+    monthlyData[i] = { month: i, totalIncomingAmount: 0 };
+  }
+
+  checks.forEach((check) => {
+    const monthNumber = new Date(check.issue_date).getMonth() + 1;
+    if (monthlyData[monthNumber]) {
+      monthlyData[monthNumber].totalIncomingAmount += Number(check.amount);
+    }
+  });
+
+  return {
+    year,
+    monthlyBreakdown: Object.values(monthlyData),
   };
 }
 
@@ -469,4 +527,5 @@ module.exports = {
   getYearlyReportForUser,
   getInventoryValuationForUser,
   getZakatReportForUser,
+  getMonthlyIncomingChecksReport, // تمت إضافة الدالة هنا
 };

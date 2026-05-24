@@ -479,6 +479,28 @@ const updateTransactionValidation = validate([
   }),
 ]);
 
+const addPurchasePaymentValidation = validate([
+  body("payment_method")
+    .notEmpty()
+    .isIn(["cash", "check", "existing_check"]) // السماح بالنوع الجديد
+    .withMessage("طريقة الدفع يجب أن تكون كاش، شيك صادر، أو شيك وارد"),
+
+  body("amount")
+    .notEmpty()
+    .isFloat({ gt: 0 })
+    .withMessage("المبلغ مطلوب ويجب أن يكون أكبر من 0"),
+
+  body("payment_date").notEmpty().isDate().withMessage("تاريخ الدفعة مطلوب"),
+
+  // شرط: إذا كان النوع "existing_check"، يجب إرسال check_id
+  body("check_id").custom((value, { req }) => {
+    if (req.body.payment_method === "existing_check" && !value) {
+      throw new Error("يجب تحديد رقم الشيك (check_id) عند استخدام شيك وارد");
+    }
+    return true;
+  }),
+]);
+
 module.exports = {
   signUpValidation,
   loginValidation,
@@ -500,4 +522,5 @@ module.exports = {
 
   createTransactionValidation,
   updateTransactionValidation,
+  addPurchasePaymentValidation,
 };

@@ -61,7 +61,7 @@ module.exports = {
       check_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        unique: true,
+        unique: false,
         references: {
           model: "Checks",
           key: "id",

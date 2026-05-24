@@ -311,10 +311,12 @@ async function deleteCheckForUser(userId, id) {
   });
 }
 
+// [source: 2] - تعديل دالة getChecksForUser في ملف check.service.js
 async function getChecksForUser(userId, query) {
   const {
     status,
     type,
+    available_for_purchase, // المعامل الجديد
     page = 1,
     limit = 10,
     sortBy = "issue_date",
@@ -332,24 +334,26 @@ async function getChecksForUser(userId, query) {
     "created_at",
     "id",
   ];
-
   const finalSortBy = allowedSortFields.includes(sortBy)
     ? sortBy
     : "issue_date";
-
   const finalSortOrder =
     String(sortOrder).toUpperCase() === "ASC" ? "ASC" : "DESC";
 
-  const where = {
-    user_id: userId,
-  };
+  const where = { user_id: userId };
+  if (status) where.status = status;
+  if (type) where.type = type;
 
-  if (status) {
-    where.status = status;
-  }
-
-  if (type) {
-    where.type = type;
+  // المنطق الجديد: إذا طلب الفرونت الشيكات المتاحة للشراء فقط
+  if (available_for_purchase === "true") {
+    where.type = "وارد"; // الشيكات الواردة فقط هي التي يمكن الدفع بها
+    where[models.Sequelize.Op.and] = [
+      models.sequelize.literal(`NOT EXISTS (
+        SELECT 1 FROM Payments 
+        WHERE Payments.check_id = Check.id 
+        AND Payments.purchase_id IS NOT NULL
+      )`),
+    ];
   }
 
   const { count, rows } = await models.Check.findAndCountAll({

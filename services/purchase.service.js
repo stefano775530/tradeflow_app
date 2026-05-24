@@ -108,7 +108,33 @@ async function findOwnedSupplierOrNull(userId, partnerId, transaction) {
 
   return partner;
 }
+async function findOwnedCheckOrThrow(userId, checkId, transaction) {
+  const check = await models.Check.findOne({
+    where: {
+      id: checkId,
+      user_id: userId,
+    },
+    transaction,
+    lock: transaction.LOCK.UPDATE,
+  });
 
+  if (!check) {
+    throw new AppError(404, "Check not found");
+  }
+
+  if (check.type !== "وارد") {
+    throw new AppError(
+      400,
+      "Only incoming checks can be used for purchase payments",
+    );
+  }
+
+  if (check.status === "cashed") {
+    throw new AppError(400, "Check already cashed");
+  }
+
+  return check;
+}
 async function getOwnedWarehousesMap(userId, warehouseIds, transaction) {
   const uniqueIds = [...new Set(warehouseIds.map(Number))];
 
@@ -252,7 +278,6 @@ async function createPurchaseForUser(userId, payload) {
           `Each purchase item must contain at least one allocation. Problem at items[${itemIndex}]`,
         );
       }
-
       return item.allocations.map((allocation) => allocation.warehouse_id);
     });
 
@@ -278,19 +303,15 @@ async function createPurchaseForUser(userId, payload) {
         `items[${itemIndex}].sale_price`,
       );
 
-      if (!itemName) {
+      if (!itemName)
         throw new AppError(400, `items[${itemIndex}].item_name is required`);
-      }
-
-      if (!thickness) {
+      if (!thickness)
         throw new AppError(400, `items[${itemIndex}].thickness is required`);
-      }
 
       const minimumQuantity =
         item.minimum_quantity !== undefined
           ? Number(item.minimum_quantity)
           : 10;
-
       const expirationDate = normalizeDateOnly(
         item.expiration_date || item.expiration_date_snapshot,
       );
@@ -347,24 +368,27 @@ async function createPurchaseForUser(userId, payload) {
       (sum, item) => sum + toNumber(item.line_total),
       0,
     );
-
     const incomingPayments = Array.isArray(payload.payments)
       ? payload.payments
       : [];
 
-    const preparedPayments = incomingPayments.map((payment, paymentIndex) => {
+    const preparedPayments = [];
+    let totalPaid = 0;
+
+    // Use an async loop so we can fetch existing checks and get their TRUE amounts from the DB
+    for (
+      let paymentIndex = 0;
+      paymentIndex < incomingPayments.length;
+      paymentIndex++
+    ) {
+      const payment = incomingPayments[paymentIndex];
+
       if (!payment.payment_method) {
         throw new AppError(
           400,
           `payments[${paymentIndex}].payment_method is required`,
         );
       }
-
-      const amount = assertPositiveNumber(
-        payment.amount,
-        `payments[${paymentIndex}].amount`,
-      );
-
       if (!payment.payment_date) {
         throw new AppError(
           400,
@@ -373,16 +397,26 @@ async function createPurchaseForUser(userId, payload) {
       }
 
       if (payment.payment_method === "cash") {
-        return {
+        const amount = assertPositiveNumber(
+          payment.amount,
+          `payments[${paymentIndex}].amount`,
+        );
+        totalPaid += amount;
+
+        preparedPayments.push({
           payment_method: "cash",
           amount,
           payment_date: payment.payment_date,
           notes: payment.notes || null,
-        };
-      }
+        });
+      } else if (payment.payment_method === "check") {
+        const amount = assertPositiveNumber(
+          payment.amount,
+          `payments[${paymentIndex}].amount`,
+        );
+        totalPaid += amount;
 
-      if (payment.payment_method === "check") {
-        return {
+        preparedPayments.push({
           payment_method: "check",
           amount,
           payment_date: payment.payment_date,
@@ -392,24 +426,47 @@ async function createPurchaseForUser(userId, payload) {
             amount,
             partner?.company_name || null,
           ),
-        };
+        });
+      } else if (payment.payment_method === "existing_check") {
+        if (!payment.check_id) {
+          throw new AppError(
+            400,
+            `payments[${paymentIndex}].check_id is required`,
+          );
+        }
+
+        // Ensure check is available and incoming (وارد) using your updated helper
+        const existingCheck = await findOwnedCheckOrThrow(
+          userId,
+          payment.check_id,
+          transaction,
+        );
+        const dbCheckAmount = toNumber(existingCheck.amount);
+
+        // Add the trusted DB amount to the totalPaid accumulator
+        totalPaid += dbCheckAmount;
+
+        preparedPayments.push({
+          payment_method: "existing_check",
+          amount: dbCheckAmount, // Force the payment to use the real check amount
+          payment_date: payment.payment_date,
+          notes: payment.notes || null,
+          check_id: Number(payment.check_id),
+          existingCheckInstance: existingCheck, // Pass the instance so we don't query it again below
+        });
+      } else {
+        throw new AppError(
+          400,
+          `Unsupported payment_method at payments[${paymentIndex}]`,
+        );
       }
+    }
 
-      throw new AppError(
-        400,
-        `Unsupported payment_method at payments[${paymentIndex}]`,
-      );
-    });
-
-    const totalPaid = preparedPayments.reduce(
-      (sum, payment) => sum + toNumber(payment.amount),
-      0,
-    );
-
+    // Check if the check value (or total payments) exceeds the purchase total
     if (totalPaid > totalAmount) {
       throw new AppError(
         400,
-        `Total payments (${totalPaid}) cannot exceed purchase total (${totalAmount})`,
+        `Total payments (${totalPaid}) cannot exceed purchase total (${totalAmount}). Ensure the check amount is not larger than the purchase.`,
       );
     }
 
@@ -485,8 +542,34 @@ async function createPurchaseForUser(userId, payload) {
           },
           { transaction },
         );
-
         checkId = createdCheck.id;
+      }
+
+      if (paymentData.payment_method === "existing_check") {
+        const existingCheck = paymentData.existingCheckInstance;
+        checkId = existingCheck.id;
+
+        // Change the check from income (وارد) to outcome (صادر)
+        existingCheck.type = "صادر";
+        existingCheck.status = "cashed";
+        existingCheck.cashing_date = paymentData.payment_date;
+
+        await existingCheck.save({ transaction });
+
+        await models.Transaction.create(
+          {
+            user_id: userId,
+            type: "expense",
+            category: "check_out",
+            amount: paymentData.amount, // Real DB amount
+            description: `purchase paid using existing check ${existingCheck.check_number}`,
+            transaction_date: paymentData.payment_date,
+            reference_type: "check",
+            reference_id: existingCheck.id,
+            company_name: existingCheck.company_name,
+          },
+          { transaction },
+        );
       }
 
       const payment = await models.Payment.create(
@@ -495,7 +578,7 @@ async function createPurchaseForUser(userId, payload) {
           sale_id: null,
           purchase_id: purchase.id,
           payment_method: paymentData.payment_method,
-          amount: paymentData.amount,
+          amount: paymentData.amount, // Validated safely
           payment_date: paymentData.payment_date,
           check_id: checkId,
           notes: paymentData.notes,
@@ -593,7 +676,25 @@ function validateAddPurchasePaymentPayload(payload) {
     throw new AppError(400, "payment_method is required");
   }
 
-  assertPositiveNumber(payload.amount, "amount");
+  // Only require amount from the payload if it's NOT an existing check
+  if (payload.payment_method !== "existing_check") {
+    assertPositiveNumber(payload.amount, "amount");
+  }
+
+  if (!payload.payment_date) {
+    throw new AppError(400, "payment_date is required");
+  }
+}
+
+function validateAddPurchasePaymentPayload(payload) {
+  if (!payload.payment_method) {
+    throw new AppError(400, "payment_method is required");
+  }
+
+  // Only require amount from the payload if it's NOT an existing check
+  if (payload.payment_method !== "existing_check") {
+    assertPositiveNumber(payload.amount, "amount");
+  }
 
   if (!payload.payment_date) {
     throw new AppError(400, "payment_date is required");
@@ -620,18 +721,12 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
       throw new AppError(400, "This purchase is already fully paid");
     }
 
-    const paymentAmount = assertPositiveNumber(payload.amount, "amount");
-
-    if (paymentAmount > currentRemaining) {
-      throw new AppError(
-        400,
-        `Payment amount (${paymentAmount}) cannot exceed remaining amount (${currentRemaining})`,
-      );
-    }
-
+    let paymentAmount; // Declare here, assign conditionally
     let checkId = null;
 
     if (payload.payment_method === "check") {
+      paymentAmount = assertPositiveNumber(payload.amount, "amount");
+
       const checkData = buildOutgoingCheckState(
         payload.check,
         paymentAmount,
@@ -647,10 +742,58 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
       );
 
       checkId = createdCheck.id;
-    } else if (payload.payment_method !== "cash") {
+    } else if (payload.payment_method === "existing_check") {
+      if (!payload.check_id) {
+        throw new AppError(400, "check_id is required");
+      }
+
+      const existingCheck = await findOwnedCheckOrThrow(
+        userId,
+        payload.check_id,
+        transaction,
+      );
+
+      // AUTO-FILL the amount directly from the database record!
+      paymentAmount = toNumber(existingCheck.amount);
+
+      if (paymentAmount > currentRemaining) {
+        throw new AppError(
+          400,
+          `Existing check amount (${paymentAmount}) exceeds the remaining purchase amount (${currentRemaining})`,
+        );
+      }
+
+      checkId = existingCheck.id;
+
+      // Flip the check from incoming to outgoing
+      existingCheck.type = "صادر";
+      existingCheck.status = "cashed";
+      existingCheck.cashing_date = payload.payment_date;
+
+      await existingCheck.save({ transaction });
+
+      // Log the movement of the endorsed check
+      await models.Transaction.create(
+        {
+          user_id: userId,
+          type: "expense",
+          category: "check_out",
+          amount: paymentAmount,
+          description: `Purchase paid using existing check ${existingCheck.check_number}`,
+          transaction_date: payload.payment_date,
+          reference_type: "check",
+          reference_id: existingCheck.id,
+          company_name: existingCheck.company_name,
+        },
+        { transaction },
+      );
+    } else if (payload.payment_method === "cash") {
+      paymentAmount = assertPositiveNumber(payload.amount, "amount");
+    } else {
       throw new AppError(400, "Unsupported payment_method");
     }
 
+    // Now create the master payment record with the correctly resolved paymentAmount
     const payment = await models.Payment.create(
       {
         user_id: userId,
@@ -665,6 +808,7 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
       { transaction },
     );
 
+    // Standard cash transaction logging
     if (payload.payment_method === "cash") {
       await models.Transaction.create(
         {
@@ -682,6 +826,7 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
       );
     }
 
+    // Log the transaction if a NEW check was created and immediately marked as cashed
     if (
       payload.payment_method === "check" &&
       payload.check &&
@@ -703,6 +848,7 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
       );
     }
 
+    // Update the purchase ledger balances
     const updatedPaidAmount = toNumber(purchase.paid_amount) + paymentAmount;
     const updatedRemainingAmount =
       toNumber(purchase.total_amount) - updatedPaidAmount;
@@ -717,6 +863,7 @@ async function addPaymentToPurchaseForUser(userId, purchaseId, payload) {
 
     await purchase.save({ transaction });
 
+    // Return the hydrated purchase object
     return models.Purchase.findByPk(purchase.id, {
       include: [
         {
@@ -775,6 +922,9 @@ async function getPurchasesForUser(userId, query) {
 
   const where = {
     user_id: userId,
+    remaining_amount: {
+      [Op.ne]: 0,
+    },
   };
 
   if (payment_status) {
@@ -789,6 +939,8 @@ async function getPurchasesForUser(userId, query) {
 
     where.payment_status = payment_status;
   }
+
+  where.remaining_amount !== 0;
 
   if (status) {
     const allowedStatuses = ["draft", "completed", "cancelled"];

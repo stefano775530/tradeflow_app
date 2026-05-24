@@ -3,6 +3,7 @@ const controller = require("../controllers/purchase.controller");
 const { checkAuth } = require("../middleware/check-auth");
 
 const router = express.Router();
+
 /**
  * @openapi
  * /api/purchases:
@@ -147,22 +148,29 @@ router.post("/", checkAuth, controller.createPurchase);
  *             cashPayment:
  *               summary: Add cash payment
  *               value:
- *                 payment_method: cash
+ *                 payment_method: "cash"
  *                 amount: 20000
- *                 payment_date: "2026-04-13"
- *                 notes: second purchase payment
- *             checkPayment:
- *               summary: Add check payment
+ *                 payment_date: "2026-05-19"
+ *                 notes: "Second purchase payment"
+ *             existingCheckPayment:
+ *               summary: Pay using existing incoming check
  *               value:
- *                 payment_method: check
+ *                 payment_method: "existing_check"
  *                 amount: 15000
- *                 payment_date: "2026-04-14"
- *                 notes: third purchase payment by check
+ *                 payment_date: "2026-05-19"
+ *                 check_id: 10
+ *                 notes: "Paid by endorsing incoming check ID 10"
+ *             checkPayment:
+ *               summary: Add new outgoing check
+ *               value:
+ *                 payment_method: "check"
+ *                 amount: 15000
+ *                 payment_date: "2026-05-19"
  *                 check:
- *                   bank_name: ABC Bank
- *                   check_number: OUT-7001
- *                   issue_date: "2026-04-14"
- *                   status: pending
+ *                   bank_name: "ABC Bank"
+ *                   check_number: "OUT-999"
+ *                   issue_date: "2026-05-19"
+ *                   status: "pending"
  *     responses:
  *       201:
  *         description: Payment added successfully

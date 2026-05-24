@@ -64,7 +64,7 @@ module.exports = (sequelize, DataTypes) => {
       check_id: {
         type: DataTypes.INTEGER,
         allowNull: true,
-        unique: true,
+        unique: false,
       },
 
       notes: {
