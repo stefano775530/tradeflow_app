@@ -1,4 +1,5 @@
 // import 'package:flutter/material.dart';
+// import 'package:tradeflow_app/Operation/purchase_screen.dart';
 // import '../Operation/Transaction_details_screen.dart';
 // import '../Operation/financial_management_screen.dart';
 // import '../Operation/warehouse_distribution_screen.dart';
@@ -29,10 +30,9 @@
 //         child: ListView(
 //           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
 //           children: [
-//             // الكرت الأول: تم تعديل الـ onTap لاستدعاء القائمة المنبثقة
 //             _buildOperationCard(
 //               context: context,
-//               title: 'تفاصيل العملية',
+//               title: 'إنشاء عملية',
 //               subtitle:
 //                   'اختر نوع العملية (بيع أو شراء) لمتابعة تفاصيل العميل والمستودع.',
 //               imagePath: 'images/image 17.png',
@@ -72,7 +72,6 @@
 //     );
 //   }
 
-//   // دالة لإظهار قائمة "بيع أو شراء" من الأسفل
 //   void _showSelectionSheet(BuildContext context) {
 //     showModalBottomSheet(
 //       context: context,
@@ -117,6 +116,7 @@
 //                       Navigator.push(
 //                         context,
 //                         MaterialPageRoute(
+//                           // نمرر true لعملية البيع
 //                           builder: (_) =>
 //                               const TransactionDetailsScreen(isSale: true),
 //                         ),
@@ -134,8 +134,8 @@
 //                       Navigator.push(
 //                         context,
 //                         MaterialPageRoute(
-//                           builder: (_) =>
-//                               const TransactionDetailsScreen(isSale: false),
+//                           // نمرر false لعملية الشراء
+//                           builder: (_) => const PurchaseScreen(),
 //                         ),
 //                       );
 //                     },
@@ -150,7 +150,6 @@
 //     );
 //   }
 
-//   // تصميم الزر داخل القائمة المنبثقة
 //   Widget _buildSelectionTile(
 //     BuildContext context, {
 //     required String title,
@@ -256,11 +255,9 @@
 //     );
 //   }
 // }
-
 import 'package:flutter/material.dart';
 import 'package:tradeflow_app/Operation/purchase_screen.dart';
 import '../Operation/Transaction_details_screen.dart';
-import '../Operation/financial_management_screen.dart';
 import '../Operation/warehouse_distribution_screen.dart';
 
 class OperationScreen extends StatelessWidget {
@@ -308,20 +305,6 @@ class OperationScreen extends StatelessWidget {
                 context,
                 MaterialPageRoute(
                   builder: (_) => const WarehouseDistributionScreen(),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            _buildOperationCard(
-              context: context,
-              title: 'الالتزامات',
-              subtitle:
-                  'متابعة الدفعات المالية، الشيكات المستحقة، والمدفوعات المتأخرة.',
-              imagePath: 'images/11683826 1.png',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const FinancialManagementScreen(),
                 ),
               ),
             ),
@@ -375,7 +358,6 @@ class OperationScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          // نمرر true لعملية البيع
                           builder: (_) =>
                               const TransactionDetailsScreen(isSale: true),
                         ),
@@ -393,7 +375,6 @@ class OperationScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          // نمرر false لعملية الشراء
                           builder: (_) => const PurchaseScreen(),
                         ),
                       );

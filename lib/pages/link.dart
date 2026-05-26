@@ -33,8 +33,20 @@ class ApiEndpoints {
   static const String getSuppliersDebts =
       "$baseUrl/purchases"; // تأكد أن المسار مطابق للباك إند عندكr
 
+  static const String getChecksApi =
+      "$baseUrl/checks?type=وارد&page=1&limit=100&sortBy=issue_date&sortOrder=DESC&status=pending";
+
   static const String getDebtsToUs = "$baseUrl/debts/to-us";
   static const String getDebtsFromUs = "$baseUrl/debts/from-us";
   static const String getCustomerDetails = "$baseUrl/debts/details";
   static const String addPayment = "$baseUrl/debts/add-payment";
+
+  static const String getMonthlyReport = "$baseUrl/reports/monthly";
+  static const String getYearlyReport = "$baseUrl/reports/yearly";
+  static const String getMonthlyChecks =
+      "$baseUrl/reports/incoming-checks-monthly";
+
+  static const String logout = "$baseUrl/user/logout";
+
+  static const String getZakatReport = "$baseUrl/reports/zakat";
 }

@@ -1927,7 +1927,7 @@ class _DebtDetailsScreenState extends State<DebtDetailsScreen> {
         Column(
           children: [
             const Text(
-              "الرصيد الحالي",
+              " الرصيد المتبقي",
               style: TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 14,

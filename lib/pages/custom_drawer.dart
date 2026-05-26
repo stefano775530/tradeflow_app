@@ -1,7 +1,45 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tradeflow_app/pages/link.dart';
+import 'package:tradeflow_app/pages/login_screen.dart';
 
+void main() {
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: HomeScreen(username: ""),
+    ),
+  );
+}
+
+class HomeScreen extends StatelessWidget {
+  final String username;
+
+  const HomeScreen({super.key, required this.username});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("الصفحة الرئيسية"),
+        backgroundColor: const Color(0xFF3D5EAB),
+        foregroundColor: Colors.white,
+      ),
+      drawer: const CustomDrawer(username: "userName"),
+      body: const Center(child: Text("أهلاً بك في تطبيق حمزة")),
+    );
+  }
+}
+
+// ==========================================
+// القائمة الجانبية
+// ==========================================
 class CustomDrawer extends StatelessWidget {
-  const CustomDrawer({super.key});
+  final String username;
+
+  const CustomDrawer({super.key, required this.username});
 
   @override
   Widget build(BuildContext context) {
@@ -11,7 +49,7 @@ class CustomDrawer extends StatelessWidget {
       backgroundColor: Colors.white,
       child: Column(
         children: [
-          // ===== الهيدر =====
+          // الهيدر
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(
@@ -29,92 +67,80 @@ class CustomDrawer extends StatelessWidget {
             ),
             child: Column(
               children: [
-                // صورة المستخدم
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 3),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Color(0xFF5B7FD4),
-                    child: Icon(
-                      Icons.person_rounded,
-                      size: 50,
-                      color: Colors.white,
-                    ),
-                  ),
+                const CircleAvatar(
+                  radius: 40,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 45, color: primaryBlue),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 12),
                 const Text(
-                  'اهلا بك',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    fontFamily: 'Cairo',
-                  ),
+                  'أهلاً بك',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
-                const Text(
-                  'العميل',
-                  style: TextStyle(
+                Text(
+                  " $username اهلا",
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    fontFamily: 'Cairo',
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
             ),
           ),
 
-          // ===== عناصر القائمة =====
+          // القائمة
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              padding: const EdgeInsets.all(12),
               children: [
-                const SizedBox(height: 8),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.home_rounded,
-                  title: 'الرئيسية',
-                  primaryBlue: primaryBlue,
-                  onTap: () => Navigator.pop(context),
+                  Icons.account_circle_outlined,
+                  'تفاصيل الحساب',
+                  primaryBlue,
+                  () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AccountDetailsScreen(),
+                      ),
+                    );
+                  },
                 ),
                 _buildDrawerItem(
                   context,
-                  icon: Icons.person_rounded,
-                  title: 'الملف الشخصي',
-                  primaryBlue: primaryBlue,
-                  onTap: () => Navigator.pop(context),
-                ),
-                _buildDrawerItem(
-                  context,
-                  icon: Icons.settings_rounded,
-                  title: 'الإعدادات',
-                  primaryBlue: primaryBlue,
-                  onTap: () => Navigator.pop(context),
+                  Icons.support_agent_rounded,
+                  'الدعم',
+                  primaryBlue,
+                  () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SupportScreen(),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),
           ),
 
-          // ===== زر تسجيل الخروج =====
+          // زر تسجيل الخروج
           Padding(
             padding: const EdgeInsets.all(16),
             child: GestureDetector(
               onTap: () {
-                Navigator.pop(context);
-                // هون تضيف منطق تسجيل الخروج
+                Navigator.pop(context); // أغلق الـ Drawer
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
               },
               child: Container(
-                width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 decoration: BoxDecoration(
                   color: Colors.red.shade50,
@@ -136,7 +162,6 @@ class CustomDrawer extends StatelessWidget {
                         color: Colors.red.shade400,
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        fontFamily: 'Cairo',
                       ),
                     ),
                   ],
@@ -144,52 +169,154 @@ class CustomDrawer extends StatelessWidget {
               ),
             ),
           ),
-
-          const SizedBox(height: 10),
         ],
       ),
     );
   }
 
-  Widget _buildDrawerItem(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required Color primaryBlue,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(borderRadius: BorderRadius.circular(14)),
-      child: ListTile(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        leading: Container(
-          padding: const EdgeInsets.all(8),
+  Widget _buildDrawerItem(context, icon, title, color, onTap) => ListTile(
+    leading: Icon(icon, color: color),
+    title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+    trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.grey),
+    onTap: onTap,
+  );
+}
+
+// ==========================================
+// صفحة تفاصيل الحساب
+// ==========================================
+class AccountDetailsScreen extends StatefulWidget {
+  const AccountDetailsScreen({super.key});
+
+  @override
+  State<AccountDetailsScreen> createState() => _AccountDetailsScreenState();
+}
+
+class _AccountDetailsScreenState extends State<AccountDetailsScreen> {
+  bool _isObscure = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FE),
+      appBar: AppBar(
+        title: const Text("تفاصيل الحساب"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Container(
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(25),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+            ],
           ),
-          child: Icon(icon, color: primaryBlue, size: 22),
-        ),
-        title: Text(
-          title,
-          textAlign: TextAlign.right,
-          style: const TextStyle(
-            fontFamily: 'Cairo',
-            fontWeight: FontWeight.w600,
-            fontSize: 16,
-            color: Color(0xFF2D3243),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildTile(Icons.person, "الاسم", "حمزة محمد"),
+              const Divider(),
+              _buildTile(Icons.email, "البريد", "hamza@official.com"),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.lock, color: Color(0xFF3D5EAB)),
+                title: const Text(
+                  "كلمة المرور",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                subtitle: Text(
+                  _isObscure ? "••••••••••••" : "Hamza@123",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                trailing: IconButton(
+                  icon: Icon(
+                    _isObscure ? Icons.visibility_off : Icons.visibility,
+                  ),
+                  onPressed: () => setState(() => _isObscure = !_isObscure),
+                ),
+              ),
+            ],
           ),
         ),
-        trailing: Icon(
-          Icons.arrow_back_ios_rounded,
-          color: Colors.grey.shade400,
-          size: 16,
-        ),
-        onTap: onTap,
-        hoverColor: primaryBlue.withOpacity(0.05),
-        splashColor: primaryBlue.withOpacity(0.1),
       ),
     );
   }
+
+  Widget _buildTile(icon, title, sub) => ListTile(
+    leading: Icon(icon, color: const Color(0xFF3D5EAB)),
+    title: Text(
+      title,
+      style: const TextStyle(fontSize: 12, color: Colors.grey),
+    ),
+    subtitle: Text(
+      sub,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+    ),
+  );
+}
+
+// ==========================================
+// صفحة الدعم
+// ==========================================
+class SupportScreen extends StatelessWidget {
+  const SupportScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FE),
+      appBar: AppBar(
+        title: const Text("مركز الدعم"),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            _card(Icons.phone, "اتصال هاتفي", "+970 599 000 000", Colors.blue),
+            const SizedBox(height: 15),
+            _card(
+              Icons.email,
+              "البريد الإلكتروني",
+              "support@app.com",
+              Colors.orange,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card(icon, title, sub, color) => Container(
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(color: color.withOpacity(0.2)),
+    ),
+    child: Row(
+      children: [
+        Icon(icon, color: color, size: 30),
+        const SizedBox(width: 20),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            Text(sub, style: const TextStyle(color: Colors.grey)),
+          ],
+        ),
+      ],
+    ),
+  );
 }
