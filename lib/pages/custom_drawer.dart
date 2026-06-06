@@ -78,7 +78,7 @@ class CustomDrawer extends StatelessWidget {
                   style: TextStyle(color: Colors.white70, fontSize: 14),
                 ),
                 Text(
-                  " $username اهلا",
+                  " $username",
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
