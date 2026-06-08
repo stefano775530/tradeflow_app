@@ -294,20 +294,20 @@ class OperationScreen extends StatelessWidget {
               imagePath: 'images/image 17.png',
               onTap: () => _showSelectionSheet(context),
             ),
-            const SizedBox(height: 16),
-            _buildOperationCard(
-              context: context,
-              title: 'توزيع المستودعات',
-              subtitle:
-                  'إدارة مخزونك، تحديد الكميات المطلوبة، واختيار المستودعات.',
-              imagePath: 'images/10826967 1.png',
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const WarehouseDistributionScreen(),
-                ),
-              ),
-            ),
+            // const SizedBox(height: 16),
+            // _buildOperationCard(
+            //   context: context,
+            //   title: 'توزيع المستودعات',
+            //   subtitle:
+            //       'إدارة مخزونك، تحديد الكميات المطلوبة، واختيار المستودعات.',
+            //   imagePath: 'images/10826967 1.png',
+            //   onTap: () => Navigator.push(
+            //     context,
+            //     MaterialPageRoute(
+            //       builder: (_) => const WarehouseDistributionScreen(),
+            //     ),
+            //   ),
+            // ),
           ],
         ),
       ),
